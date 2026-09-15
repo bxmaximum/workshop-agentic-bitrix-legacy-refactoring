@@ -42,3 +42,4 @@ $MESS["LV_SORT_NAME"] = "по названию";
 $MESS["LV_NAV_PREV"] = "Назад";
 $MESS["LV_NAV_NEXT"] = "Вперёд";
 $MESS["LV_WEEK_SUMMARY"] = "За неделю: #N# откликов на #V# вакансий";
+$MESS["LEGACY_VACANCIES_FORM_OK"] = "Спасибо! Отклик отправлен, мы свяжемся с вами.";

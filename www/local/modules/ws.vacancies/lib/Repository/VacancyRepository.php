@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Ws\Vacancies\Repository;
 
-use Bitrix\Iblock\ElementPropertyTable;
 use Bitrix\Iblock\Elements\ElementVacancyTable;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\PropertyEnumerationTable;
 use Bitrix\Iblock\PropertyTable;
 use Bitrix\Iblock\SectionTable;
+use Bitrix\Main\Application;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ORM\Fields\ExpressionField;
 use Bitrix\Main\ORM\Query\Query;
@@ -250,25 +250,29 @@ final class VacancyRepository
 	}
 
 	/**
+	 * Множественные строковые свойства инфоблока v2 лежат в b_iblock_element_prop_m{IBLOCK_ID}.
+	 *
 	 * @return list<string>
 	 */
 	public function getTags(int $elementId): array
 	{
 		$propertyId = $this->getTagsPropertyId();
-		if ($propertyId <= 0 || $elementId <= 0)
+		$iblockId = $this->getIblockId();
+		if ($propertyId <= 0 || $elementId <= 0 || $iblockId <= 0)
 		{
 			return [];
 		}
 
-		$rows = ElementPropertyTable::query()
-			->setSelect(['VALUE'])
-			->where('IBLOCK_PROPERTY_ID', $propertyId)
-			->where('IBLOCK_ELEMENT_ID', $elementId)
-			->setOrder(['ID' => 'ASC'])
-			->fetchAll();
+		$helper = Application::getConnection()->getSqlHelper();
+		$table = 'b_iblock_element_prop_m' . $iblockId;
+		$sql = 'SELECT VALUE FROM ' . $helper->quote($table)
+			. ' WHERE IBLOCK_ELEMENT_ID = ' . (int)$elementId
+			. ' AND IBLOCK_PROPERTY_ID = ' . (int)$propertyId
+			. ' ORDER BY ID ASC';
 
 		$tags = [];
-		foreach ($rows as $row)
+		$rs = Application::getConnection()->query($sql);
+		while ($row = $rs->fetch())
 		{
 			$tag = trim((string)$row['VALUE']);
 			if ($tag !== '')
@@ -406,19 +410,21 @@ final class VacancyRepository
 	private function findElementIdsByTagLike(string $q): array
 	{
 		$propertyId = $this->getTagsPropertyId();
-		if ($propertyId <= 0)
+		$iblockId = $this->getIblockId();
+		if ($propertyId <= 0 || $iblockId <= 0 || $q === '')
 		{
 			return [];
 		}
 
-		$rows = ElementPropertyTable::query()
-			->setSelect(['IBLOCK_ELEMENT_ID'])
-			->where('IBLOCK_PROPERTY_ID', $propertyId)
-			->whereLike('VALUE', '%' . $q . '%')
-			->fetchAll();
+		$helper = Application::getConnection()->getSqlHelper();
+		$table = 'b_iblock_element_prop_m' . $iblockId;
+		$sql = 'SELECT DISTINCT IBLOCK_ELEMENT_ID FROM ' . $helper->quote($table)
+			. ' WHERE IBLOCK_PROPERTY_ID = ' . (int)$propertyId
+			. " AND VALUE LIKE '%" . $helper->forSql($q) . "%'";
 
 		$ids = [];
-		foreach ($rows as $row)
+		$rs = Application::getConnection()->query($sql);
+		while ($row = $rs->fetch())
 		{
 			$ids[] = (int)$row['IBLOCK_ELEMENT_ID'];
 		}

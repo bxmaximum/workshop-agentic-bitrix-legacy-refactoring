@@ -3,6 +3,6 @@
     "private": true,
     "description": "Playwright для pest-plugin-browser. Устанавливать из этой папки: npm install && npx playwright install chromium",
     "devDependencies": {
-        "playwright": "^1.50"
+        "playwright": "^1.63.0"
     }
 }
