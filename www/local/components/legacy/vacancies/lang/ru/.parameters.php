@@ -1,0 +1,19 @@
+<?
+$MESS["LEGACY_VACANCIES_GROUP_FORM"] = "Форма отклика";
+$MESS["LEGACY_VACANCIES_GROUP_SIDEBAR"] = "Боковая колонка";
+$MESS["LEGACY_VACANCIES_IBLOCK_TYPE"] = "Тип инфоблока";
+$MESS["LEGACY_VACANCIES_IBLOCK_ID"] = "Инфоблок вакансий";
+$MESS["LEGACY_VACANCIES_PAGE_SIZE"] = "Вакансий на странице";
+$MESS["LEGACY_VACANCIES_DEFAULT_SORT"] = "Сортировка по умолчанию";
+$MESS["LEGACY_VACANCIES_SORT_DATE"] = "По дате публикации";
+$MESS["LEGACY_VACANCIES_SORT_SALARY"] = "По зарплате";
+$MESS["LEGACY_VACANCIES_SORT_VIEWS"] = "По просмотрам";
+$MESS["LEGACY_VACANCIES_SORT_NAME"] = "По названию";
+$MESS["LEGACY_VACANCIES_BASE_URL"] = "URL раздела";
+$MESS["LEGACY_VACANCIES_SHOW_POPULAR"] = "Показывать популярные";
+$MESS["LEGACY_VACANCIES_POPULAR_COUNT"] = "Сколько популярных";
+$MESS["LEGACY_VACANCIES_RELATED_COUNT"] = "Сколько похожих на детальной";
+$MESS["LEGACY_VACANCIES_SHOW_FORM"] = "Показывать форму отклика";
+$MESS["LEGACY_VACANCIES_FORM_EMAIL_TO"] = "E-mail для откликов";
+$MESS["LEGACY_VACANCIES_FORM_EVENT_NAME"] = "Почтовое событие";
+$MESS["LEGACY_VACANCIES_FORM_TIMEOUT"] = "Пауза между откликами, сек";

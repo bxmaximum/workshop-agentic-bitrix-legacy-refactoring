@@ -1,0 +1,59 @@
+.lv { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1f2937; line-height: 1.5; }
+.lv a { color: #2563eb; }
+.lv-list, .lv-detail { display: flex; gap: 32px; align-items: flex-start; }
+.lv-main { flex: 1 1 auto; min-width: 0; }
+.lv-side { flex: 0 0 260px; }
+.lv-title { font-size: 26px; margin: 0 0 12px; }
+.lv-title small { color: #6b7280; font-weight: normal; font-size: 16px; }
+.lv-badge { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 6px; }
+.lv-badge-hot { background: #fee2e2; color: #b91c1c; }
+.lv-badge-new { background: #dcfce7; color: #166534; }
+.lv-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: #4b5563; font-size: 14px; margin-bottom: 8px; }
+.lv-salary { font-weight: 600; color: #111827; }
+.lv-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.lv-tag { font-size: 12px; background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 999px; text-decoration: none; }
+.lv-tag:hover { background: #e5e7eb; }
+.lv-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; padding: 12px; background: #f9fafb; border-radius: 8px; }
+.lv-filter input[type=text], .lv-filter input[type=number], .lv-filter select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+.lv-filter input[type=text] { flex: 1 1 200px; }
+.lv-check { font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.lv-btn { background: #2563eb; color: #fff; border: 0; border-radius: 6px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+.lv-btn:hover { background: #1d4ed8; }
+.lv-reset { font-size: 14px; align-self: center; }
+.lv-sort { font-size: 14px; color: #6b7280; margin-bottom: 12px; }
+.lv-sort a, .lv-sort b { margin-left: 8px; }
+.lv-items { display: flex; flex-direction: column; gap: 12px; }
+.lv-item { border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+.lv-item-hot { border-color: #fca5a5; }
+.lv-item-head { display: flex; align-items: center; gap: 8px; }
+.lv-item-name { font-size: 18px; font-weight: 600; text-decoration: none; }
+.lv-item-name:hover { text-decoration: underline; }
+.lv-item-head .lv-fav { margin-left: auto; text-decoration: none; color: #d1d5db; font-size: 20px; }
+.lv-fav-on { color: #f59e0b !important; }
+.lv-item-text { margin: 6px 0; color: #374151; font-size: 14px; }
+.lv-item-foot { display: flex; gap: 16px; color: #9ca3af; font-size: 13px; margin-top: 6px; }
+.lv-nav { display: flex; gap: 8px; margin: 20px 0; align-items: center; }
+.lv-nav a, .lv-nav b { padding: 4px 10px; border-radius: 6px; border: 1px solid #e5e7eb; text-decoration: none; }
+.lv-nav b { background: #2563eb; color: #fff; border-color: #2563eb; }
+.lv-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; }
+.lv-box h3 { margin: 0 0 8px; font-size: 15px; }
+.lv-box ul, .lv-box ol { margin: 0; padding-left: 18px; }
+.lv-box li { margin: 4px 0; }
+.lv-box li small { color: #9ca3af; display: block; }
+.lv-box .lv-sel { font-weight: 600; }
+.lv-box-muted { background: #f9fafb; color: #6b7280; }
+.lv-breadcrumbs { font-size: 13px; color: #6b7280; }
+.lv-text { margin: 16px 0; }
+.lv-lead { font-size: 16px; color: #374151; }
+.lv-stats { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; font-size: 14px; color: #6b7280; padding: 12px 0; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+.lv-stats .lv-fav { text-decoration: none; color: #6b7280; }
+.lv-stats-week { color: #b91c1c; }
+.lv-form { margin-top: 24px; }
+.lv-form h2 { font-size: 20px; margin: 0 0 12px; }
+.lv-form-body { display: flex; flex-direction: column; gap: 10px; max-width: 480px; }
+.lv-form-body label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.lv-form-body input, .lv-form-body textarea { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; }
+.lv-form-ok { background: #dcfce7; color: #166534; padding: 12px; border-radius: 6px; }
+.lv-form-errors { background: #fee2e2; color: #b91c1c; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 14px; }
+.lv-empty { padding: 32px; text-align: center; color: #6b7280; }
+@media (max-width: 800px) { .lv-list, .lv-detail { flex-direction: column; } .lv-side { flex-basis: auto; width: 100%; } }

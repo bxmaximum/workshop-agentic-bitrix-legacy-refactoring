@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "skills": {
+    "bitrix-background-jobs": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-background-jobs/SKILL.md",
+      "computedHash": "cbc62a1f0e22c9adb38b1a96f6f2e6872309b79e5e0df4d15d9b3c789cc785e6"
+    },
+    "bitrix-bizproc": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-bizproc/SKILL.md",
+      "computedHash": "612f6aa70984b8276c703c7159a141d0f2c30ba557504a78e408b4b7f045fdc7"
+    },
+    "bitrix-caching": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-caching/SKILL.md",
+      "computedHash": "40d11e04d06df7611011593a0a38a9efc1716584635928ff75fa5bb6e55a0a8a"
+    },
+    "bitrix-catalog": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-catalog/SKILL.md",
+      "computedHash": "3413b5adceb4a1c38fa6576acc50f19ef23e314e397aebe122d6a89e6da408f9"
+    },
+    "bitrix-cms-basics": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-cms-basics/SKILL.md",
+      "computedHash": "0e19936410a1a9eeccc24293b3c8b2d23a5ac185510008aa99ed5697c8162c29"
+    },
+    "bitrix-components": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-components/SKILL.md",
+      "computedHash": "905268a05054460d92d8cea62ad43aad8c5ab0d8a6a27d0bcb427379361bdac8"
+    },
+    "bitrix-console-commands": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-console-commands/SKILL.md",
+      "computedHash": "f72dbf78894f8ae3c003ddd63cdbb62397f935e785728a02175509a911c731f5"
+    },
+    "bitrix-controllers": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-controllers/SKILL.md",
+      "computedHash": "0fe6d1075d670da3591c23a7979381934e78ece5935300437ec2b878b23eba3b"
+    },
+    "bitrix-database": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-database/SKILL.md",
+      "computedHash": "8cd4dc5604b2324435c75ad7d741bbdd76e9907c8d5e9b1c64b4ec4d0c9d9ca9"
+    },
+    "bitrix-datetime": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-datetime/SKILL.md",
+      "computedHash": "97798a4f8962a421ac7efebdb4b968908dd929dbb75076a55f5b1acfe2663bf8"
+    },
+    "bitrix-events": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-events/SKILL.md",
+      "computedHash": "91806e2edaf7b679de04f9531cf4f57657f5b5be68bc3b8d272178fb953ec671"
+    },
+    "bitrix-extensions": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-extensions/SKILL.md",
+      "computedHash": "0a8e0ba48f16a41d3164435bd1ad345e4bbfff62e40a4d55893abf5e1a0d2da5"
+    },
+    "bitrix-highloadblock": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-highloadblock/SKILL.md",
+      "computedHash": "df279498015e05e430e103ad87853806c9c8854e48631f8dc89be18147348eff"
+    },
+    "bitrix-http-client": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-http-client/SKILL.md",
+      "computedHash": "c030de214725a8d19265aea4f5984c1ed4acf0aa00b015b15051f0771d7a2ee1"
+    },
+    "bitrix-iblocks": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-iblocks/SKILL.md",
+      "computedHash": "dbd238d08a8d4059e6e0f5aa460f315f6f713f8afb813c6f859b093f91d11483"
+    },
+    "bitrix-landing": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-landing/SKILL.md",
+      "computedHash": "470dd7d3cdc6fed2201393c21e4881257b2adaaa5de55f03683bb0ca610eff0a"
+    },
+    "bitrix-localization": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-localization/SKILL.md",
+      "computedHash": "c7f0d7bf81b9cd16dbc3281f89bcf916dd31c15d836aaa47c7d877349d7ea790"
+    },
+    "bitrix-logger": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-logger/SKILL.md",
+      "computedHash": "e42b18048b5c9379f515fd92fd35a6584edce402b18d32a1bd812f26311dc77c"
+    },
+    "bitrix-modules": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-modules/SKILL.md",
+      "computedHash": "03f0c05023d26e0f81ef429a9792dac6a0381c9fa5e10d17bb259b4d33d44b01"
+    },
+    "bitrix-orm": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-orm/SKILL.md",
+      "computedHash": "1ac8b70061cfa49f0e2502b7be2aa2dc61406888e0519085ae301d1ee13a4b01"
+    },
+    "bitrix-performance": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-performance/SKILL.md",
+      "computedHash": "f4dfe12bf87d477fc8124070ad2a8c1801f3f96788fbeb14a8ab97d0454befdf"
+    },
+    "bitrix-postgresql": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-postgresql/SKILL.md",
+      "computedHash": "24ca48fbac9876c8dfb36f50b276b8e26177e42506f6c8d659ba41626ad392e0"
+    },
+    "bitrix-project-structure": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-project-structure/SKILL.md",
+      "computedHash": "0c77572db4d5c3981789fca5c26fa3889bc976ac2d469adf125a53f9db92ba1c"
+    },
+    "bitrix-pull": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-pull/SKILL.md",
+      "computedHash": "62c244427723af450938743085ad373c25530154e39cd9e9e530162ec04c245d"
+    },
+    "bitrix-request-response": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-request-response/SKILL.md",
+      "computedHash": "f7fdf91314e086c20f8cfd6246bf7ce18afaf1dfbcb80047bea451aebf1749e7"
+    },
+    "bitrix-rest": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-rest/SKILL.md",
+      "computedHash": "7cfa2f0891b64cd32ac43fafc14910531b08294a3f7551df07d0aa2eb880c53d"
+    },
+    "bitrix-result-and-errors": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-result-and-errors/SKILL.md",
+      "computedHash": "7646e9d48557b1cd2b86a32f5cd905e909fdcc68625612918293ab9f14a40822"
+    },
+    "bitrix-routing": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-routing/SKILL.md",
+      "computedHash": "41a536e2558228e161bedb61482d96ce0ced4f45c1cf7adbea3c641c8b06a9e4"
+    },
+    "bitrix-sale": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-sale/SKILL.md",
+      "computedHash": "969a5a6cf4d3c160fc75b1f186ac729dca293fa3814480ee2a815df2e0f0b633"
+    },
+    "bitrix-security": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-security/SKILL.md",
+      "computedHash": "14beb2a994e67d90aa5ce8165f530ce11214e66cb479541a391dd87d0f35cd15"
+    },
+    "bitrix-seo": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-seo/SKILL.md",
+      "computedHash": "a7f78410364839103f11b585b897740934e9fb2b2093c3af91161f0cf29ef68a"
+    },
+    "bitrix-service-locator": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-service-locator/SKILL.md",
+      "computedHash": "53876e72377a6a96f2f54e270f23050c6905e71ac83f2f05471a6c271cf54159"
+    },
+    "bitrix-sessions": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-sessions/SKILL.md",
+      "computedHash": "7049f629897b923bf7b36ba0cacfdd0308c9424196985dd669d6ed5e164c30d6"
+    },
+    "bitrix-settings": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-settings/SKILL.md",
+      "computedHash": "bd3dc664538012e006a42b141d7d193be9df1a0608a41556fcb247660dde0baa"
+    },
+    "bitrix-sprint-migration": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-sprint-migration/SKILL.md",
+      "computedHash": "e3139591af0f4fe6c637ffdcb407d4ce53e73f6d0b82222219f7a06300e23aaf"
+    },
+    "bitrix-storage": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-storage/SKILL.md",
+      "computedHash": "82cbb3b3843558d0f84f0a9488c393496e4247135f2eefe526001b4541e31727"
+    },
+    "bitrix-ui": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-ui/SKILL.md",
+      "computedHash": "fe8997e055ff9ede835d8eea50c0426da88ab85dfb5ac840602bb4eeaaaa30c6"
+    },
+    "bitrix-validation": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-validation/SKILL.md",
+      "computedHash": "fd7ec0a3c9ae47288301ae692abd9ecd91612858923742996202850a429e9bd5"
+    },
+    "bitrix-vue": {
+      "source": "bxmaximum/bitrix-framework-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bitrix-vue/SKILL.md",
+      "computedHash": "759b324ecf6abfae5c330c5738f590876c43ec36400313691a84ec114666ceed"
+    }
+  }
+}

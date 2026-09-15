@@ -1,0 +1,22 @@
+# Стенд воркшопа Agentic Bitrix — репозиторий лежит в корне сайта Omut (~/Omut/workshop.bitrix/).
+# Трекаем только пользовательский код и материалы занятий. Ядро, БД, зависимости — нет.
+
+# Публичная часть: всё, кроме /local/
+/www/*
+!/www/local/
+/www/local/php_interface/dbconn.php
+/www/local/.settings_extra.php
+
+# Зависимости
+/vendor/
+/node_modules/
+
+# Артефакты npx skills (нужны только .agents/skills и skills-lock.json)
+/agent/
+/.claude/
+
+# Служебное
+.DS_Store
+.idea/
+*.log
+/e2e/

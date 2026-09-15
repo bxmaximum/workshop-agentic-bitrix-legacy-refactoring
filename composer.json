@@ -1,0 +1,20 @@
+{
+  "config": {
+    "allow-plugins": {
+      "wikimedia/composer-merge-plugin": true
+    },
+    "sort-packages": true,
+    "vendor-dir": "vendor"
+  },
+  "extra": {
+    "merge-plugin": {
+      "include": [
+        "www/bitrix/composer-bx.json"
+      ]
+    }
+  },
+  "name": "omut/site-lesson3",
+  "require": {
+    "wikimedia/composer-merge-plugin": "^2.1"
+  }
+}
