@@ -132,3 +132,9 @@ Open the skill for the task. If it has `rules/`, read **only** matching rule fil
 ## Local Env
 
 Omut PHP-env into /Users/kirk/Library/Application Support/Omut/bin/shims/php
+Запуск тестов через: 
+```
+export PATH="/Users/kirk/Library/Application Support/Omut/bin/shims:$PATH"
+cd /Users/kirk/Omut/lesson3-copy.bitrix/e2e ./vendor/bin/pest
+```
+
