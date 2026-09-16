@@ -75,21 +75,4 @@ final readonly class VacancyFilterDto
 			favoriteIds: array_values(array_map(static fn($id): int => (int)$id, $favoriteIds)),
 		);
 	}
-
-	public function withPage(int $page): self
-	{
-		return new self(
-			section: $this->section,
-			city: $this->city,
-			exp: $this->exp,
-			salary: $this->salary,
-			hot: $this->hot,
-			fav: $this->fav,
-			q: $this->q,
-			sort: $this->sort,
-			page: max(1, $page),
-			pageSize: $this->pageSize,
-			favoriteIds: $this->favoriteIds,
-		);
-	}
 }

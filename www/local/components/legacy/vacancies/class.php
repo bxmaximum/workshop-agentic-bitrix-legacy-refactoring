@@ -9,619 +9,292 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
+use Bitrix\Main\Engine\CurrentUser;
+use Bitrix\Main\HttpRequest;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Ws\Vacancies\Controller\Request\VacancyResponseRequest;
+use Ws\Vacancies\Dto\PageMetaDto;
+use Ws\Vacancies\Dto\PageSettingsDto;
 use Ws\Vacancies\Dto\ResponseSettingsDto;
 use Ws\Vacancies\Dto\VacancyDto;
 use Ws\Vacancies\Dto\VacancyFilterDto;
-use Ws\Vacancies\Dto\VacancyResponseInputDto;
-use Ws\Vacancies\Repository\VacancyRepository;
-use Ws\Vacancies\Service\FavoriteService;
-use Ws\Vacancies\Service\SidebarService;
+use Ws\Vacancies\Presenter\VacancyPresenter;
+use Ws\Vacancies\Service\VacancyPageService;
 use Ws\Vacancies\Service\VacancyResponseService;
-use Ws\Vacancies\Service\VacancyService;
 
 Loc::loadMessages(__FILE__);
 
 /**
- * Тонкий ООП-компонент раздела «Вакансии».
- * Бизнес-логика — в модуле ws.vacancies (Service → Repository → Model).
+ * Тонкий компонент раздела «Вакансии»: HTTP-вход → сервисы модуля ws.vacancies → arResult.
  */
 final class LegacyVacanciesComponent extends CBitrixComponent
 {
-	private VacancyService $vacancyService;
-	private VacancyResponseService $responseService;
-	private FavoriteService $favoriteService;
-	private SidebarService $sidebarService;
-	private VacancyRepository $vacancyRepository;
+	private const SORT_CODES = ['date', 'salary', 'views', 'name'];
+
+	private VacancyPageService $pages;
+	private VacancyResponseService $responses;
+	private VacancyPresenter $presenter;
 
 	public function onPrepareComponentParams($arParams): array
 	{
-		$arParams['IBLOCK_ID'] = isset($arParams['IBLOCK_ID']) ? (int)$arParams['IBLOCK_ID'] : 0;
+		$arParams['IBLOCK_ID'] = (int)($arParams['IBLOCK_ID'] ?? 0);
+		$arParams['PAGE_SIZE'] = $this->intParam($arParams, 'PAGE_SIZE', 5, 50);
+		$arParams['POPULAR_COUNT'] = $this->intParam($arParams, 'POPULAR_COUNT', 5);
+		$arParams['RELATED_COUNT'] = $this->intParam($arParams, 'RELATED_COUNT', 3);
+		$arParams['FORM_TIMEOUT'] = max(0, (int)($arParams['FORM_TIMEOUT'] ?? 60));
 
-		$arParams['PAGE_SIZE'] = isset($arParams['PAGE_SIZE']) ? (int)$arParams['PAGE_SIZE'] : 0;
-		if ($arParams['PAGE_SIZE'] <= 0)
-		{
-			$arParams['PAGE_SIZE'] = 5;
-		}
-		if ($arParams['PAGE_SIZE'] > 50)
-		{
-			$arParams['PAGE_SIZE'] = 50;
-		}
+		$arParams['SHOW_POPULAR'] = ($arParams['SHOW_POPULAR'] ?? 'Y') === 'N' ? 'N' : 'Y';
+		$arParams['SHOW_FORM'] = ($arParams['SHOW_FORM'] ?? 'Y') === 'N' ? 'N' : 'Y';
 
-		$arParams['POPULAR_COUNT'] = isset($arParams['POPULAR_COUNT']) ? (int)$arParams['POPULAR_COUNT'] : 0;
-		if ($arParams['POPULAR_COUNT'] <= 0)
-		{
-			$arParams['POPULAR_COUNT'] = 5;
-		}
-
-		$arParams['RELATED_COUNT'] = isset($arParams['RELATED_COUNT']) ? (int)$arParams['RELATED_COUNT'] : 0;
-		if ($arParams['RELATED_COUNT'] <= 0)
-		{
-			$arParams['RELATED_COUNT'] = 3;
-		}
-
-		$arParams['FORM_TIMEOUT'] = isset($arParams['FORM_TIMEOUT']) ? (int)$arParams['FORM_TIMEOUT'] : 60;
-		if ($arParams['FORM_TIMEOUT'] < 0)
-		{
-			$arParams['FORM_TIMEOUT'] = 0;
-		}
-
-		$arParams['SHOW_POPULAR'] = (isset($arParams['SHOW_POPULAR']) && $arParams['SHOW_POPULAR'] === 'N') ? 'N' : 'Y';
-		$arParams['SHOW_FORM'] = (isset($arParams['SHOW_FORM']) && $arParams['SHOW_FORM'] === 'N') ? 'N' : 'Y';
-
-		$arParams['BASE_URL'] = isset($arParams['BASE_URL']) ? trim((string)$arParams['BASE_URL']) : '';
-		if ($arParams['BASE_URL'] === '')
-		{
-			$arParams['BASE_URL'] = '/vacancies/';
-		}
-
-		$arParams['DEFAULT_SORT'] = isset($arParams['DEFAULT_SORT']) ? trim((string)$arParams['DEFAULT_SORT']) : 'date';
-		if (!in_array($arParams['DEFAULT_SORT'], ['date', 'salary', 'views', 'name'], true))
+		$arParams['BASE_URL'] = trim((string)($arParams['BASE_URL'] ?? '')) ?: '/vacancies/';
+		$arParams['DEFAULT_SORT'] = trim((string)($arParams['DEFAULT_SORT'] ?? ''));
+		if (!in_array($arParams['DEFAULT_SORT'], self::SORT_CODES, true))
 		{
 			$arParams['DEFAULT_SORT'] = 'date';
 		}
-
-		$arParams['FORM_EVENT_NAME'] = isset($arParams['FORM_EVENT_NAME']) ? trim((string)$arParams['FORM_EVENT_NAME']) : '';
-		if ($arParams['FORM_EVENT_NAME'] === '')
-		{
-			$arParams['FORM_EVENT_NAME'] = 'LEGACY_VACANCY_RESPONSE';
-		}
-
-		$arParams['FORM_EMAIL_TO'] = isset($arParams['FORM_EMAIL_TO']) ? trim((string)$arParams['FORM_EMAIL_TO']) : '';
+		$arParams['FORM_EVENT_NAME'] = trim((string)($arParams['FORM_EVENT_NAME'] ?? '')) ?: 'LEGACY_VACANCY_RESPONSE';
+		$arParams['FORM_EMAIL_TO'] = trim((string)($arParams['FORM_EMAIL_TO'] ?? ''));
 
 		return $arParams;
 	}
 
 	public function executeComponent(): void
 	{
-		global $APPLICATION, $USER;
-
-		require_once $_SERVER['DOCUMENT_ROOT'] . '/local/php_interface/include/legacy_helpers.php';
-
-		if (!Loader::includeModule('iblock'))
+		if (!Loader::includeModule('iblock') || !Loader::includeModule('ws.vacancies'))
 		{
 			ShowError(Loc::getMessage('LEGACY_VACANCIES_ERR_NO_MODULE'));
 
 			return;
 		}
 
-		if (!Loader::includeModule('ws.vacancies'))
-		{
-			ShowError(Loc::getMessage('LEGACY_VACANCIES_ERR_NO_MODULE'));
+		$locator = ServiceLocator::getInstance();
+		$this->pages = $locator->get(VacancyPageService::class);
+		$this->responses = $locator->get(VacancyResponseService::class);
+		$this->presenter = $locator->get(VacancyPresenter::class);
 
-			return;
-		}
-
-		$this->resolveServices();
-
-		$iblockId = (int)$this->arParams['IBLOCK_ID'];
-		if ($iblockId <= 0)
-		{
-			$iblockId = $this->vacancyService->getIblockId();
-		}
-		if ($iblockId <= 0)
+		if ($this->pages->getIblockId() <= 0)
 		{
 			ShowError(Loc::getMessage('LEGACY_VACANCIES_ERR_NO_IBLOCK'));
 
 			return;
 		}
 
-		$baseUrl = (string)$this->arParams['BASE_URL'];
 		$request = Context::getCurrent()->getRequest();
-		$server = Context::getCurrent()->getServer();
-
-		// Баг №4: строго верхний регистр ID/CODE
-		$elementId = (int)($request->get('ID') ?? 0);
-		$elementCode = trim((string)($request->get('CODE') ?? ''));
-		$elementCode = preg_replace('/[^a-z0-9\-_]/i', '', $elementCode) ?? '';
-
-		// старые ссылки вида /vacancies/?vacancy=123
-		if ($elementId <= 0 && $request->get('vacancy') !== null)
-		{
-			$elementId = (int)$request->get('vacancy');
-		}
-
-		$filterDto = VacancyFilterDto::fromRequest(
-			$request,
-			(int)$this->arParams['PAGE_SIZE'],
-			(string)$this->arParams['DEFAULT_SORT'],
-		);
+		[$elementId, $elementCode] = $this->resolveElement($request);
 
 		$this->arResult = [
 			'MODE' => 'list',
-			'IBLOCK_ID' => $iblockId,
-			'BASE_URL' => $baseUrl,
+			'BASE_URL' => $this->arParams['BASE_URL'],
 			'ITEMS' => [],
 			'ITEM' => [],
 			'RELATED' => [],
 			'POPULAR' => [],
 			'SECTIONS' => [],
-			'CITIES' => $this->vacancyRepository->getCities($iblockId),
-			'EXPERIENCE' => $this->vacancyRepository->getExperienceList($iblockId),
-			'FILTER' => [
-				'city' => $filterDto->city,
-				'section' => $filterDto->section,
-				'exp' => $filterDto->exp,
-				'salary' => $filterDto->salary,
-				'q' => $filterDto->q,
-				'hot' => $filterDto->hot ? 'Y' : '',
-				'fav' => $filterDto->fav ? 'Y' : '',
-				'sort' => $filterDto->sort,
-				'page' => $filterDto->page,
-			],
-			'NAV' => [],
-			'FORM' => ['ERRORS' => [], 'VALUES' => [], 'SENT' => false],
-			'FAVORITES' => $this->favoriteService->getFavoriteIds(),
 			'ERROR' => '',
-			'FILTER_ACTIVE' => false,
-			'SORT_URLS' => [],
-			'RESET_URL' => $baseUrl,
-			'WEEK_SUMMARY' => null,
 		];
 
 		if ($elementId > 0 || $elementCode !== '')
 		{
-			$this->executeDetail(
-				$elementId,
-				$elementCode,
-				$baseUrl,
-				$request->isPost() && $request->getPost('legacy_respond') !== null,
-				(string)($request->get('sent') ?? '') === 'Y',
-				$USER,
-				$APPLICATION,
-				$server,
-			);
-
-			return;
+			$this->executeDetail($request, $elementId, $elementCode);
+		}
+		else
+		{
+			$this->executeList($request);
 		}
 
-		$this->executeList($filterDto, $baseUrl, $APPLICATION);
+		$this->includeComponentTemplate();
 	}
 
-	private function resolveServices(): void
+	/**
+	 * Баг №4: только верхнерегистровые ID/CODE. Баг №5: ID приоритетнее CODE (решает сервис).
+	 *
+	 * @return array{0: int, 1: string}
+	 */
+	private function resolveElement(HttpRequest $request): array
 	{
-		$locator = ServiceLocator::getInstance();
+		$id = (int)($request->get('ID') ?? 0);
+		if ($id <= 0 && $request->get('vacancy') !== null)
+		{
+			// старые ссылки вида /vacancies/?vacancy=123
+			$id = (int)$request->get('vacancy');
+		}
 
-		$this->vacancyService = $locator->get(VacancyService::class);
-		$this->responseService = $locator->get(VacancyResponseService::class);
-		$this->favoriteService = $locator->get(FavoriteService::class);
-		$this->sidebarService = $locator->get(SidebarService::class);
-		$this->vacancyRepository = $locator->get(VacancyRepository::class);
+		$code = preg_replace('/[^a-z0-9\-_]/i', '', trim((string)($request->get('CODE') ?? ''))) ?? '';
+
+		return [$id, $code];
 	}
 
-	private function executeDetail(
-		int $elementId,
-		string $elementCode,
-		string $baseUrl,
-		bool $isFormPost,
-		bool $sentFlag,
-		mixed $USER,
-		mixed $APPLICATION,
-		mixed $server,
-	): void {
-		$this->arResult['MODE'] = 'detail';
+	private function executeList(HttpRequest $request): void
+	{
+		$filter = VacancyFilterDto::fromRequest(
+			$request,
+			(int)$this->arParams['PAGE_SIZE'],
+			(string)$this->arParams['DEFAULT_SORT'],
+		);
+		$page = $this->pages->listPage($filter, $this->pageSettings());
+		$baseUrl = $this->arParams['BASE_URL'];
 
-		$isPost = Context::getCurrent()->getRequest()->isPost();
-		$item = $this->vacancyService->getDetail($elementId, $elementCode, $isPost, $baseUrl);
+		$this->arResult['ITEMS'] = array_map(
+			fn(VacancyDto $dto): array => $this->presenter->item($dto, $baseUrl, forList: true),
+			$page->list->items,
+		);
+		$this->arResult['NAV'] = $this->presenter->navigation($page->nav);
+		$this->arResult['SORT_URLS'] = $page->sortUrls;
+		$this->arResult['RESET_URL'] = $page->resetUrl;
+		$this->arResult['FILTER'] = $this->presenter->filter($filter, $page->list->currentPage);
+		$this->arResult['FILTER_ACTIVE'] = $page->filterActive;
+		$this->arResult['CITIES'] = $page->cities;
+		$this->arResult['EXPERIENCE'] = $page->experience;
+		$this->arResult['SECTIONS'] = array_map([$this->presenter, 'section'], $page->sidebar->sections);
+		$this->arResult['POPULAR'] = array_map([$this->presenter, 'popular'], $page->sidebar->popular);
+		$this->arResult['WEEK_SUMMARY'] = $page->sidebar->weekSummary;
 
-		if ($item === null)
+		$this->applyMeta($page->meta);
+	}
+
+	private function executeDetail(HttpRequest $request, int $elementId, string $elementCode): void
+	{
+		$page = $this->pages->detailPage($elementId, $elementCode, $request->isPost(), $this->pageSettings());
+
+		if ($page === null)
 		{
+			$meta = $this->pages->notFoundMeta();
 			$this->arResult['MODE'] = '404';
-			$this->arResult['ERROR'] = (string)Loc::getMessage('LEGACY_VACANCIES_ERR_NOT_FOUND');
-			$APPLICATION->SetTitle((string)Loc::getMessage('LEGACY_VACANCIES_ERR_NOT_FOUND'));
+			$this->arResult['ERROR'] = $meta->title;
 			@define('ERROR_404', 'Y');
 			CHTTP::SetStatus('404 Not Found');
-			$this->includeComponentTemplate();
+			$this->applyMeta($meta);
 
 			return;
 		}
 
-		if ($this->arParams['SHOW_FORM'] === 'Y' && $isFormPost)
-		{
-			$request = Context::getCurrent()->getRequest();
-			$name = $this->clean((string)($request->getPost('name') ?? ''), 100);
-			$email = $this->clean((string)($request->getPost('email') ?? ''), 100);
-			$phone = $this->clean((string)($request->getPost('phone') ?? ''), 30);
-			$message = $this->cleanText((string)($request->getPost('message') ?? ''), 2000);
-
-			$this->arResult['FORM']['VALUES'] = [
-				'name' => $name,
-				'email' => $email,
-				'phone' => $phone,
-				'message' => $message,
-			];
-
-			$dto = new VacancyResponseInputDto(
-				vacancyId: $item->id,
-				name: $name,
-				email: $email,
-				phone: $phone,
-				message: $message,
-				ip: (string)($server->get('REMOTE_ADDR') ?? ''),
-				userId: ($USER && method_exists($USER, 'IsAuthorized') && $USER->IsAuthorized())
-					? (int)$USER->GetID()
-					: 0,
-			);
-
-			$result = $this->responseService->sendResponse(
-				$dto,
-				new ResponseSettingsDto(
-					timeout: (int)$this->arParams['FORM_TIMEOUT'],
-					eventName: (string)$this->arParams['FORM_EVENT_NAME'],
-					emailTo: (string)$this->arParams['FORM_EMAIL_TO'],
-					baseUrl: $baseUrl,
-					siteHost: (string)($server->get('HTTP_HOST') ?? ''),
-				),
-			);
-
-			if ($result->isSuccess())
-			{
-				// как в легаси: без #respond
-				LocalRedirect($item->url . '&sent=Y');
-			}
-
-			$errors = [];
-			foreach ($result->getErrors() as $error)
-			{
-				$code = $error->getCode() !== '' ? $error->getCode() : 'error';
-				$errors[$code] = $error->getMessage();
-			}
-			$this->arResult['FORM']['ERRORS'] = $errors;
-		}
-
-		// Баг №12
-		if ($sentFlag)
-		{
-			$this->arResult['FORM']['SENT'] = true;
-		}
-
-		$popularCount = $this->arParams['SHOW_POPULAR'] === 'Y' ? (int)$this->arParams['POPULAR_COUNT'] : 0;
-		$sidebar = $this->sidebarService->getForDetail(
-			$item,
-			$popularCount,
-			(int)$this->arParams['RELATED_COUNT'],
-			$baseUrl,
-		);
-
-		$this->arResult['ITEM'] = $this->mapVacancyToArray($item, forList: false);
+		$baseUrl = $this->arParams['BASE_URL'];
+		$this->arResult['MODE'] = 'detail';
+		$this->arResult['FORM'] = $this->processForm($request, $page->item);
+		$this->arResult['ITEM'] = $this->presenter->item($page->item, $baseUrl, forList: false);
 		$this->arResult['RELATED'] = array_map(
-			fn(VacancyDto $dto): array => $this->mapVacancyToArray($dto, forList: false, relatedLite: true),
-			$sidebar->related,
+			fn(VacancyDto $dto): array => $this->presenter->item($dto, $baseUrl, forList: false),
+			$page->sidebar->related,
 		);
-		$this->arResult['POPULAR'] = array_map(
-			fn(VacancyDto $dto): array => $this->mapPopularToArray($dto),
-			$sidebar->popular,
+		$this->arResult['POPULAR'] = array_map([$this->presenter, 'popular'], $page->sidebar->popular);
+
+		$this->applyMeta($page->meta);
+	}
+
+	/**
+	 * Форма отклика. При успехе — редирект на &sent=Y (без #respond, как в легаси).
+	 * Баг №12: sent=Y в GET показывает успех без отправки.
+	 *
+	 * @return array{ERRORS: array<string, string>, VALUES: array<string, string>, SENT: bool}
+	 */
+	private function processForm(HttpRequest $request, VacancyDto $item): array
+	{
+		$form = [
+			'ERRORS' => [],
+			'VALUES' => [],
+			'SENT' => (string)($request->get('sent') ?? '') === 'Y',
+		];
+
+		if ($this->arParams['SHOW_FORM'] !== 'Y')
+		{
+			return $form;
+		}
+
+		if (!$request->isPost() || $request->getPost('legacy_respond') === null)
+		{
+			$user = CurrentUser::get();
+			if ((int)$user->getId() > 0)
+			{
+				$form['VALUES'] = [
+					'name' => (string)$user->getFullName(),
+					'email' => (string)$user->getEmail(),
+					'phone' => '',
+					'message' => '',
+				];
+			}
+
+			return $form;
+		}
+
+		$input = VacancyResponseRequest::createFromRequest($request);
+		$form['VALUES'] = [
+			'name' => (string)$input->name,
+			'email' => (string)$input->email,
+			'phone' => (string)$input->phone,
+			'message' => (string)$input->message,
+		];
+
+		$result = $this->responses->sendResponse(
+			$input->toInputDto(
+				vacancyId: $item->id,
+				ip: (string)$request->getRemoteAddress(),
+				userId: (int)CurrentUser::get()->getId(),
+			),
+			new ResponseSettingsDto(
+				timeout: (int)$this->arParams['FORM_TIMEOUT'],
+				eventName: (string)$this->arParams['FORM_EVENT_NAME'],
+				emailTo: (string)$this->arParams['FORM_EMAIL_TO'],
+				baseUrl: (string)$this->arParams['BASE_URL'],
+				siteHost: (string)$request->getHttpHost(),
+			),
 		);
 
-		// Баг №17: title с зарплатой
-		$title = $item->name;
-		if ($item->salaryText !== '' && $item->salaryText !== 'по договорённости')
+		if ($result->isSuccess())
 		{
-			$title .= ' (' . $item->salaryText . ')';
-		}
-		$APPLICATION->SetTitle($title);
-
-		$description = trim(strip_tags($item->previewText));
-		if (mb_strlen($description) > 160)
-		{
-			$description = mb_substr($description, 0, 157) . '...';
-		}
-		if ($description !== '')
-		{
-			$APPLICATION->SetPageProperty('description', $description);
+			LocalRedirect($item->url . '&sent=Y');
 		}
 
-		$tags = $this->prepareTags($item->tags);
-		$APPLICATION->SetPageProperty('keywords', implode(', ', $tags));
-
-		$APPLICATION->AddChainItem((string)Loc::getMessage('LEGACY_VACANCIES_TITLE_LIST'), $baseUrl);
-		if ($item->sectionName !== '' && $item->sectionUrl !== '')
+		foreach ($result->getErrors() as $error)
 		{
-			$APPLICATION->AddChainItem($item->sectionName, $item->sectionUrl);
+			$form['ERRORS'][$error->getCode() ?: 'error'] = $error->getMessage();
 		}
-		$APPLICATION->AddChainItem($item->name);
 
-		$this->includeComponentTemplate();
+		return $form;
 	}
 
-	private function executeList(VacancyFilterDto $filterDto, string $baseUrl, mixed $APPLICATION): void
+	private function pageSettings(): PageSettingsDto
 	{
-		$list = $this->vacancyService->getList($filterDto, $baseUrl);
-
-		$filterForUrl = [
-			'city' => $filterDto->city,
-			'section' => $filterDto->section,
-			'exp' => $filterDto->exp,
-			'salary' => $filterDto->salary,
-			'q' => $filterDto->q,
-			'hot' => $filterDto->hot ? 'Y' : '',
-			'fav' => $filterDto->fav ? 'Y' : '',
-			'sort' => $filterDto->sort,
-		];
-		if ($filterForUrl['sort'] === $this->arParams['DEFAULT_SORT'])
-		{
-			unset($filterForUrl['sort']);
-		}
-
-		$nav = [
-			'PAGE' => $list->currentPage,
-			'PAGES' => $list->totalPages,
-			'TOTAL' => $list->totalCount,
-			'PAGE_SIZE' => $list->pageSize,
-			'PREV_URL' => '',
-			'NEXT_URL' => '',
-			'URLS' => [],
-		];
-
-		for ($i = 1; $i <= $list->totalPages; $i++)
-		{
-			$nav['URLS'][$i] = $this->buildUrl($baseUrl, $filterForUrl, ['page' => ($i > 1 ? $i : '')]);
-		}
-		if ($list->currentPage > 1)
-		{
-			$nav['PREV_URL'] = $nav['URLS'][$list->currentPage - 1];
-		}
-		if ($list->currentPage < $list->totalPages)
-		{
-			$nav['NEXT_URL'] = $nav['URLS'][$list->currentPage + 1];
-		}
-
-		$sortUrls = [];
-		foreach (['date', 'salary', 'views', 'name'] as $sortCode)
-		{
-			$sortUrls[$sortCode] = $this->buildUrl(
-				$baseUrl,
-				$filterForUrl,
-				[
-					'sort' => ($sortCode === $this->arParams['DEFAULT_SORT'] ? '' : $sortCode),
-					'page' => '',
-				],
-			);
-		}
-
-		$popularCount = $this->arParams['SHOW_POPULAR'] === 'Y' ? (int)$this->arParams['POPULAR_COUNT'] : 0;
-		$sidebar = $this->sidebarService->getForList($filterDto->section, $popularCount, $baseUrl);
-
-		$sections = [];
-		foreach ($sidebar->sections as $section)
-		{
-			$sections[$section->id] = [
-				'ID' => $section->id,
-				'NAME' => $section->name,
-				'CODE' => $section->code,
-				'COUNT' => $section->count,
-				'URL' => $section->url,
-				'SELECTED' => $section->selected,
-			];
-		}
-
-		$items = [];
-		foreach ($list->items as $dto)
-		{
-			$items[] = $this->mapVacancyToArray($dto, forList: true);
-		}
-
-		$this->arResult['ITEMS'] = $items;
-		$this->arResult['NAV'] = $nav;
-		$this->arResult['SORT_URLS'] = $sortUrls;
-		$this->arResult['SECTIONS'] = $sections;
-		$this->arResult['POPULAR'] = array_map(
-			fn(VacancyDto $dto): array => $this->mapPopularToArray($dto),
-			$sidebar->popular,
+		return new PageSettingsDto(
+			baseUrl: (string)$this->arParams['BASE_URL'],
+			defaultSort: (string)$this->arParams['DEFAULT_SORT'],
+			popularCount: $this->arParams['SHOW_POPULAR'] === 'Y' ? (int)$this->arParams['POPULAR_COUNT'] : 0,
+			relatedCount: (int)$this->arParams['RELATED_COUNT'],
 		);
-		$this->arResult['WEEK_SUMMARY'] = $sidebar->weekSummary;
-		$this->arResult['FILTER']['page'] = $list->currentPage;
-		$this->arResult['FILTER_ACTIVE'] = $this->isFilterActive($filterDto);
+	}
 
-		$title = (string)Loc::getMessage('LEGACY_VACANCIES_TITLE_LIST');
-		if ($filterDto->section > 0 && isset($sections[$filterDto->section]))
-		{
-			$title .= ': ' . $sections[$filterDto->section]['NAME'];
-		}
-		if ($filterDto->city > 0 && isset($this->arResult['CITIES'][$filterDto->city]))
-		{
-			$title .= ' — ' . $this->arResult['CITIES'][$filterDto->city];
-		}
-		if ($list->currentPage > 1)
-		{
-			$title .= ', страница ' . $list->currentPage;
-		}
-		$APPLICATION->SetTitle($title);
-		$APPLICATION->AddChainItem((string)Loc::getMessage('LEGACY_VACANCIES_TITLE_LIST'), $baseUrl);
+	private function applyMeta(PageMetaDto $meta): void
+	{
+		global $APPLICATION;
 
-		// Баг №17: description из названий текущей страницы
-		$names = array_map(static fn(VacancyDto $dto): string => $dto->name, $list->items);
-		if ($names !== [])
+		$APPLICATION->SetTitle($meta->title);
+		if ($meta->description !== '')
 		{
-			$APPLICATION->SetPageProperty('description', 'Вакансии: ' . implode(', ', array_slice($names, 0, 5)));
+			$APPLICATION->SetPageProperty('description', $meta->description);
 		}
-
-		$this->includeComponentTemplate();
+		if ($meta->keywords !== null)
+		{
+			$APPLICATION->SetPageProperty('keywords', $meta->keywords);
+		}
+		foreach ($meta->breadcrumbs as $crumb)
+		{
+			$APPLICATION->AddChainItem($crumb['name'], $crumb['url']);
+		}
 	}
 
 	/**
-	 * @return array<string, mixed>
+	 * Целочисленный параметр: <= 0 → значение по умолчанию, при наличии max — обрезка сверху.
+	 *
+	 * @param array<string, mixed> $params
 	 */
-	private function mapVacancyToArray(VacancyDto $dto, bool $forList, bool $relatedLite = false): array
+	private function intParam(array $params, string $key, int $default, ?int $max = null): int
 	{
-		$tags = $this->prepareTags($dto->tags);
-
-		$previewRaw = $dto->previewText;
-		$previewEscaped = htmlspecialcharsEx($previewRaw);
-		if ($forList && mb_strlen((string)$previewEscaped) > 220)
+		$value = (int)($params[$key] ?? 0);
+		if ($value <= 0)
 		{
-			$previewEscaped = mb_substr((string)$previewEscaped, 0, 217) . '...';
+			$value = $default;
 		}
 
-		$item = [
-			'ID' => $dto->id,
-			'NAME' => htmlspecialcharsEx($dto->name),
-			'~NAME' => $dto->name,
-			'CODE' => $dto->code,
-			'IBLOCK_SECTION_ID' => $dto->sectionId,
-			'URL' => $dto->url,
-			'PREVIEW_TEXT' => $previewEscaped,
-			'~PREVIEW_TEXT' => $previewRaw,
-			'PREVIEW_TEXT_TYPE' => $dto->previewTextType,
-			'DETAIL_TEXT' => htmlspecialcharsEx($dto->detailText),
-			'~DETAIL_TEXT' => $dto->detailText,
-			'DETAIL_TEXT_TYPE' => $dto->detailTextType,
-			'ACTIVE_FROM' => $dto->activeFrom,
-			'DATE_TEXT' => $dto->dateText,
-			'DATE_FORMATTED' => $dto->dateFormatted,
-			'CITY' => $dto->city,
-			'CITY_ID' => $dto->cityId,
-			'EXPERIENCE' => $dto->experience,
-			'SALARY_FROM' => $dto->salaryFrom,
-			'SALARY_TO' => $dto->salaryTo,
-			'SALARY_TEXT' => $dto->salaryText,
-			'HOT' => $dto->isHot,
-			'IS_NEW' => $dto->isNew,
-			'IS_FAVORITE' => $dto->isFavorite,
-			'TAGS' => $tags,
-			'SECTION_NAME' => $dto->sectionName,
-			'SECTION_URL' => $dto->sectionUrl,
-			'VIEWS' => $dto->views,
-			'RESPONSE_COUNT' => $dto->responseCount,
-			'WEEK_RESPONSE_COUNT' => $dto->weekResponseCount,
-			'CONTACT_EMAIL' => $dto->contactEmail,
-		];
-
-		if ($relatedLite)
-		{
-			$item['NAME'] = htmlspecialcharsEx($dto->name);
-		}
-
-		return $item;
-	}
-
-	/**
-	 * @return array<string, mixed>
-	 */
-	private function mapPopularToArray(VacancyDto $dto): array
-	{
-		return [
-			'ID' => $dto->id,
-			'NAME' => htmlspecialcharsEx($dto->name),
-			'~NAME' => $dto->name,
-			'CODE' => $dto->code,
-			'URL' => $dto->url,
-			'VIEWS' => $dto->views,
-			'VIEWS_FORMATTED' => number_format($dto->views, 0, '.', ' '),
-		];
-	}
-
-	/**
-	 * @param list<string> $tags
-	 * @return list<string>
-	 */
-	private function prepareTags(array $tags): array
-	{
-		$tags = array_values(array_unique(array_map(
-			static fn($tag): string => trim((string)$tag),
-			$tags,
-		)));
-		$tags = array_values(array_filter($tags, static fn(string $tag): bool => $tag !== ''));
-		usort($tags, static fn(string $a, string $b): int => strcasecmp($a, $b));
-
-		return $tags;
-	}
-
-	private function isFilterActive(VacancyFilterDto $filter): bool
-	{
-		if ($filter->section > 0 || $filter->city > 0 || $filter->exp > 0 || $filter->salary > 0)
-		{
-			return true;
-		}
-		if ($filter->hot || $filter->fav || $filter->q !== '')
-		{
-			return true;
-		}
-		if ($filter->sort !== $this->arParams['DEFAULT_SORT'])
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * @param array<string, mixed> $current
-	 * @param array<string, mixed> $replace
-	 */
-	private function buildUrl(string $baseUrl, array $current, array $replace = []): string
-	{
-		$params = [];
-		foreach ($current as $k => $v)
-		{
-			if ($v === '' || $v === null || $v === 0 || $v === '0')
-			{
-				continue;
-			}
-			$params[$k] = $v;
-		}
-		foreach ($replace as $k => $v)
-		{
-			if ($v === '' || $v === null || $v === 0 || $v === '0')
-			{
-				unset($params[$k]);
-			}
-			else
-			{
-				$params[$k] = $v;
-			}
-		}
-
-		if ($params === [])
-		{
-			return $baseUrl;
-		}
-
-		return $baseUrl . '?' . http_build_query($params);
-	}
-
-	private function clean(string $value, int $maxLength = 255): string
-	{
-		$value = trim(strip_tags($value));
-		$value = str_replace(["\r", "\n", "\t"], ' ', $value);
-		$value = preg_replace('/\s+/u', ' ', $value) ?? $value;
-		if ($maxLength > 0 && mb_strlen($value) > $maxLength)
-		{
-			$value = mb_substr($value, 0, $maxLength);
-		}
-
-		return $value;
-	}
-
-	private function cleanText(string $value, int $maxLength = 2000): string
-	{
-		$value = trim(strip_tags($value));
-		if ($maxLength > 0 && mb_strlen($value) > $maxLength)
-		{
-			$value = mb_substr($value, 0, $maxLength);
-		}
-
-		return $value;
+		return $max !== null ? min($value, $max) : $value;
 	}
 }

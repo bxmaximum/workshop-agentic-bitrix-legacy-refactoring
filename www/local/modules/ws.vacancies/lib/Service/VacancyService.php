@@ -265,7 +265,7 @@ final class VacancyService
 				'experienceId' => (int)($row['EXPERIENCE_ID'] ?? 0),
 				'isHot' => (bool)($row['HOT'] ?? false),
 				'isNew' => $this->isNew($activeFrom),
-				'tags' => is_array($row['TAGS'] ?? null) ? $row['TAGS'] : [],
+				'tags' => $this->normalizeTags(is_array($row['TAGS'] ?? null) ? $row['TAGS'] : []),
 				'dateFormatted' => Formatter::date($activeFrom),
 				'dateText' => Formatter::daysAgo($activeFrom),
 				'activeFrom' => $activeFrom,
@@ -280,6 +280,21 @@ final class VacancyService
 				'contactEmail' => (string)($row['CONTACT_EMAIL'] ?? ''),
 			],
 		);
+	}
+
+	/**
+	 * Теги без пустых и дублей, по алфавиту без учёта регистра.
+	 *
+	 * @param list<mixed> $tags
+	 * @return list<string>
+	 */
+	private function normalizeTags(array $tags): array
+	{
+		$tags = array_map(static fn($tag): string => trim((string)$tag), $tags);
+		$tags = array_values(array_unique(array_filter($tags, static fn(string $tag): bool => $tag !== '')));
+		usort($tags, static fn(string $a, string $b): int => strcasecmp($a, $b));
+
+		return $tags;
 	}
 
 	/**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ws\Vacancies\Service;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Error;
 use Bitrix\Main\Result;
 use CEvent;
@@ -55,7 +56,7 @@ final class VacancyResponseService
 			return $result->addError(new Error('Не удалось сохранить отклик, попробуйте позже', 'db'));
 		}
 
-		$_SESSION[self::SESSION_TIMEOUT_KEY] = time();
+		Application::getInstance()->getSession()->set(self::SESSION_TIMEOUT_KEY, time());
 
 		$responseId = (int)$addResult->getId();
 		$siteId = defined('SITE_ID') ? (string)SITE_ID : 's1';
@@ -108,11 +109,8 @@ final class VacancyResponseService
 			$errors['message'] = 'Напишите пару слов о себе';
 		}
 
-		if (
-			$timeout > 0
-			&& isset($_SESSION[self::SESSION_TIMEOUT_KEY])
-			&& (time() - (int)$_SESSION[self::SESSION_TIMEOUT_KEY]) < $timeout
-		)
+		$lastResponse = (int)(Application::getInstance()->getSession()->get(self::SESSION_TIMEOUT_KEY) ?? 0);
+		if ($timeout > 0 && $lastResponse > 0 && (time() - $lastResponse) < $timeout)
 		{
 			$errors['timeout'] = 'Вы уже отправляли отклик, подождите минуту';
 		}

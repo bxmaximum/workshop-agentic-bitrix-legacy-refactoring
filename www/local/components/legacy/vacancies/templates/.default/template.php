@@ -9,10 +9,9 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
  * @var array $arResult
  * @var CBitrixComponentTemplate $this
  * @var CMain $APPLICATION
- * @var CUser $USER
  */
 
-global $USER;
+use Ws\Vacancies\Helper\Formatter;
 
 $baseUrl = $arResult['BASE_URL'];
 ?>
@@ -64,7 +63,7 @@ $baseUrl = $arResult['BASE_URL'];
 			<?php if (!empty($arItem['TAGS'])): ?>
 				<div class="lv-tags">
 					<?php foreach ($arItem['TAGS'] as $tag): ?>
-						<a class="lv-tag" href="<?= htmlspecialcharsbx(legacy_build_url($baseUrl, [], ['q' => $tag])) ?>"><?= htmlspecialcharsbx($tag) ?></a>
+						<a class="lv-tag" href="<?= htmlspecialcharsbx($tag['URL']) ?>"><?= htmlspecialcharsbx($tag['NAME']) ?></a>
 					<?php endforeach ?>
 				</div>
 			<?php endif ?>
@@ -80,7 +79,7 @@ $baseUrl = $arResult['BASE_URL'];
 
 			<div class="lv-stats">
 				<span><?= GetMessage('LV_VIEWS') ?>: <b><?= (int)$arItem['VIEWS'] ?></b></span>
-				<span><?= GetMessage('LV_RESPONSES') ?>: <b><?= $responseCount ?></b> <?= legacy_plural($responseCount, GetMessage('LV_RESP_1'), GetMessage('LV_RESP_2'), GetMessage('LV_RESP_5')) ?></span>
+				<span><?= GetMessage('LV_RESPONSES') ?>: <b><?= $responseCount ?></b> <?= Formatter::plural($responseCount, GetMessage('LV_RESP_1'), GetMessage('LV_RESP_2'), GetMessage('LV_RESP_5')) ?></span>
 				<?php if ($weekCount > 0): ?><span class="lv-stats-week"><?= str_replace('#N#', (string)$weekCount, GetMessage('LV_RESPONSES_WEEK')) ?></span><?php endif ?>
 				<a href="#" class="lv-fav <?= $arItem['IS_FAVORITE'] ? 'lv-fav-on' : '' ?>" data-id="<?= (int)$arItem['ID'] ?>">
 					<?= $arItem['IS_FAVORITE'] ? GetMessage('LV_FAV_ON') : GetMessage('LV_FAV_OFF') ?>
@@ -101,18 +100,7 @@ $baseUrl = $arResult['BASE_URL'];
 								<?php endforeach ?>
 							</div>
 						<?php endif ?>
-						<?php
-						$v = $arResult['FORM']['VALUES'];
-						if (empty($v) && $USER->IsAuthorized())
-						{
-							$v = [
-								'name' => $USER->GetFullName(),
-								'email' => $USER->GetEmail(),
-								'phone' => '',
-								'message' => '',
-							];
-						}
-						?>
+						<?php $v = $arResult['FORM']['VALUES']; ?>
 						<form method="post" action="<?= htmlspecialcharsbx($arItem['URL']) ?>#respond" class="lv-form-body">
 							<?= bitrix_sessid_post() ?>
 							<input type="hidden" name="legacy_respond" value="Y">
@@ -253,14 +241,14 @@ $baseUrl = $arResult['BASE_URL'];
 							<?php if (!empty($arItem['TAGS'])): ?>
 								<div class="lv-tags">
 									<?php foreach ($arItem['TAGS'] as $tag): ?>
-										<a class="lv-tag" href="<?= htmlspecialcharsbx(legacy_build_url($baseUrl, [], ['q' => $tag])) ?>"><?= htmlspecialcharsbx($tag) ?></a>
+										<a class="lv-tag" href="<?= htmlspecialcharsbx($tag['URL']) ?>"><?= htmlspecialcharsbx($tag['NAME']) ?></a>
 									<?php endforeach ?>
 								</div>
 							<?php endif ?>
 							<div class="lv-item-foot">
 								<span title="<?= $arItem['DATE_FORMATTED'] ?>"><?= $arItem['DATE_TEXT'] ?></span>
 								<span><?= GetMessage('LV_VIEWS') ?>: <?= (int)$arItem['VIEWS'] ?></span>
-								<span><?= $cnt ?> <?= legacy_plural($cnt, GetMessage('LV_RESP_1'), GetMessage('LV_RESP_2'), GetMessage('LV_RESP_5')) ?></span>
+								<span><?= $cnt ?> <?= Formatter::plural($cnt, GetMessage('LV_RESP_1'), GetMessage('LV_RESP_2'), GetMessage('LV_RESP_5')) ?></span>
 							</div>
 						</div>
 					<?php endforeach ?>

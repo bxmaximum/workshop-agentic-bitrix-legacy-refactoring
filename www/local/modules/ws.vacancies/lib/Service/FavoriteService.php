@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Ws\Vacancies\Service;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Error;
 use Bitrix\Main\Result;
+use Bitrix\Main\Session\SessionInterface;
 use Ws\Vacancies\Repository\VacancyRepository;
 
 final class FavoriteService
@@ -22,12 +24,15 @@ final class FavoriteService
 	 */
 	public function getFavoriteIds(): array
 	{
-		if (!isset($_SESSION[self::SESSION_KEY]) || !is_array($_SESSION[self::SESSION_KEY]))
+		$session = $this->session();
+		$ids = $session->get(self::SESSION_KEY);
+		if (!is_array($ids))
 		{
-			$_SESSION[self::SESSION_KEY] = [];
+			$ids = [];
+			$session->set(self::SESSION_KEY, $ids);
 		}
 
-		return array_values(array_map(static fn($id): int => (int)$id, $_SESSION[self::SESSION_KEY]));
+		return array_values(array_map(static fn($id): int => (int)$id, $ids));
 	}
 
 	public function isFavorite(int $vacancyId): bool
@@ -69,14 +74,19 @@ final class FavoriteService
 
 		if (in_array($vacancyId, $fav, true))
 		{
-			$_SESSION[self::SESSION_KEY] = array_values(array_diff($fav, [$vacancyId]));
+			$this->session()->set(self::SESSION_KEY, array_values(array_diff($fav, [$vacancyId])));
 
 			return false;
 		}
 
 		$fav[] = $vacancyId;
-		$_SESSION[self::SESSION_KEY] = $fav;
+		$this->session()->set(self::SESSION_KEY, $fav);
 
 		return true;
+	}
+
+	private function session(): SessionInterface
+	{
+		return Application::getInstance()->getSession();
 	}
 }
