@@ -36,7 +36,7 @@ final class FavoriteService
 	}
 
 	/**
-	 * Добавление/удаление из сессии. CSRF не проверяется (баг №11).
+	 * Переключение с проверкой, что вакансия существует и активна. CSRF не проверяется (баг №11).
 	 */
 	public function toggle(int $vacancyId): Result
 	{
@@ -52,25 +52,31 @@ final class FavoriteService
 			return $result->addError(new Error('Вакансия не найдена', 'VACANCY_NOT_FOUND'));
 		}
 
-		$fav = $this->getFavoriteIds();
-		$isFavorite = in_array($vacancyId, $fav, true);
-
-		if ($isFavorite)
-		{
-			$fav = array_values(array_diff($fav, [$vacancyId]));
-			$isFavorite = false;
-		}
-		else
-		{
-			$fav[] = $vacancyId;
-			$isFavorite = true;
-		}
-
-		$_SESSION[self::SESSION_KEY] = $fav;
+		$isFavorite = $this->switchFavorite($vacancyId);
 
 		return $result->setData([
 			'favorite' => $isFavorite,
-			'count' => count($fav),
+			'count' => count($this->getFavoriteIds()),
 		]);
+	}
+
+	/**
+	 * Добавить/убрать ID в сессии без проверок. Возвращает новое состояние.
+	 */
+	public function switchFavorite(int $vacancyId): bool
+	{
+		$fav = $this->getFavoriteIds();
+
+		if (in_array($vacancyId, $fav, true))
+		{
+			$_SESSION[self::SESSION_KEY] = array_values(array_diff($fav, [$vacancyId]));
+
+			return false;
+		}
+
+		$fav[] = $vacancyId;
+		$_SESSION[self::SESSION_KEY] = $fav;
+
+		return true;
 	}
 }

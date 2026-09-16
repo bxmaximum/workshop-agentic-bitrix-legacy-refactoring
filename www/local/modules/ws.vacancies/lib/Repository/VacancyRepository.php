@@ -452,9 +452,11 @@ final class VacancyRepository
 	}
 
 	/**
-	 * @return array<int, string>
+	 * Значения списочного свойства инфоблока.
+	 *
+	 * @return array<int, array{ID: int, VALUE: string, XML_ID: string, SORT: int}>
 	 */
-	private function getEnumMap(int $iblockId, string $propertyCode): array
+	public function getEnumList(int $iblockId, string $propertyCode): array
 	{
 		if ($iblockId <= 0)
 		{
@@ -474,7 +476,7 @@ final class VacancyRepository
 		}
 
 		$rows = PropertyEnumerationTable::query()
-			->setSelect(['ID', 'VALUE', 'SORT'])
+			->setSelect(['ID', 'VALUE', 'XML_ID', 'SORT'])
 			->where('PROPERTY_ID', (int)$property['ID'])
 			->setOrder(['SORT' => 'ASC', 'VALUE' => 'ASC'])
 			->fetchAll();
@@ -482,10 +484,27 @@ final class VacancyRepository
 		$result = [];
 		foreach ($rows as $row)
 		{
-			$result[(int)$row['ID']] = (string)$row['VALUE'];
+			$id = (int)$row['ID'];
+			$result[$id] = [
+				'ID' => $id,
+				'VALUE' => (string)$row['VALUE'],
+				'XML_ID' => (string)($row['XML_ID'] ?? ''),
+				'SORT' => (int)$row['SORT'],
+			];
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function getEnumMap(int $iblockId, string $propertyCode): array
+	{
+		return array_map(
+			static fn(array $row): string => $row['VALUE'],
+			$this->getEnumList($iblockId, $propertyCode),
+		);
 	}
 
 	/**

@@ -11,6 +11,7 @@ use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Ws\Vacancies\Dto\ResponseSettingsDto;
 use Ws\Vacancies\Dto\VacancyDto;
 use Ws\Vacancies\Dto\VacancyFilterDto;
 use Ws\Vacancies\Dto\VacancyResponseInputDto;
@@ -263,14 +264,15 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 					: 0,
 			);
 
-			$host = (string)($server->get('HTTP_HOST') ?? '');
 			$result = $this->responseService->sendResponse(
 				$dto,
-				(int)$this->arParams['FORM_TIMEOUT'],
-				(string)$this->arParams['FORM_EVENT_NAME'],
-				(string)$this->arParams['FORM_EMAIL_TO'],
-				$item->name,
-				'http://' . $host . $item->url,
+				new ResponseSettingsDto(
+					timeout: (int)$this->arParams['FORM_TIMEOUT'],
+					eventName: (string)$this->arParams['FORM_EVENT_NAME'],
+					emailTo: (string)$this->arParams['FORM_EMAIL_TO'],
+					baseUrl: $baseUrl,
+					siteHost: (string)($server->get('HTTP_HOST') ?? ''),
+				),
 			);
 
 			if ($result->isSuccess())

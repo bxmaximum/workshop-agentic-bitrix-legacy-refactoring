@@ -7,7 +7,10 @@ namespace Ws\Vacancies\Service;
 use Bitrix\Main\Error;
 use Bitrix\Main\Result;
 use CEvent;
+use Ws\Vacancies\Dto\ResponseSettingsDto;
 use Ws\Vacancies\Dto\VacancyResponseInputDto;
+use Ws\Vacancies\Helper\Text;
+use Ws\Vacancies\Helper\UrlBuilder;
 use Ws\Vacancies\Repository\VacancyRepository;
 use Ws\Vacancies\Repository\VacancyResponseRepository;
 
@@ -23,32 +26,27 @@ final class VacancyResponseService
 
 	/**
 	 * Валидация, сохранение отклика и CEvent::Send. CSRF не проверяется (баг №11).
+	 * Ошибки в Result: код = имя поля (name, email, phone, message, timeout, vacancy, db).
 	 */
-	public function sendResponse(
-		VacancyResponseInputDto $dto,
-		int $timeout = 60,
-		string $eventName = 'LEGACY_VACANCY_RESPONSE',
-		string $emailTo = '',
-		string $vacancyName = '',
-		string $vacancyUrl = '',
-	): Result {
+	public function sendResponse(VacancyResponseInputDto $dto, ResponseSettingsDto $settings = new ResponseSettingsDto()): Result
+	{
 		$result = new Result();
-		$errors = $this->validate($dto, $timeout);
+
+		$vacancy = $this->vacancies->getById($dto->vacancyId);
+		$errors = $this->validate($dto, $settings->timeout);
+		if ($vacancy === null)
+		{
+			$errors['vacancy'] = 'Вакансия не найдена или закрыта';
+		}
 
 		if ($errors !== [])
 		{
 			foreach ($errors as $code => $message)
 			{
-				$result->addError(new Error($message, (string)$code));
+				$result->addError(new Error($message, $code));
 			}
 
 			return $result;
-		}
-
-		$vacancy = $this->vacancies->getById($dto->vacancyId);
-		if ($vacancy === null)
-		{
-			return $result->addError(new Error('Вакансия не найдена или закрыта', 'vacancy'));
 		}
 
 		$addResult = $this->responses->create($dto);
@@ -61,16 +59,17 @@ final class VacancyResponseService
 
 		$responseId = (int)$addResult->getId();
 		$siteId = defined('SITE_ID') ? (string)SITE_ID : 's1';
+		$vacancyUrl = UrlBuilder::vacancy((string)$vacancy['CODE'], $dto->vacancyId, $settings->baseUrl);
 
-		CEvent::Send($eventName, $siteId, [
+		CEvent::Send($settings->eventName, $siteId, [
 			'VACANCY_ID' => $dto->vacancyId,
-			'VACANCY_NAME' => $vacancyName !== '' ? $vacancyName : (string)$vacancy['NAME'],
-			'VACANCY_URL' => $vacancyUrl,
+			'VACANCY_NAME' => (string)$vacancy['NAME'],
+			'VACANCY_URL' => 'http://' . $settings->siteHost . $vacancyUrl,
 			'NAME' => $dto->name,
 			'EMAIL' => $dto->email,
 			'PHONE' => $dto->phone,
 			'MESSAGE' => $dto->message,
-			'EMAIL_TO' => $emailTo,
+			'EMAIL_TO' => $settings->emailTo,
 			'RESPONSE_ID' => $responseId,
 		]);
 
@@ -87,23 +86,20 @@ final class VacancyResponseService
 	{
 		$errors = [];
 
-		if (mb_strlen($dto->name) < 2)
+		// как в легаси: strlen в байтах, а не mb_strlen
+		if (strlen($dto->name) < 2)
 		{
 			$errors['name'] = 'Укажите имя';
 		}
 
-		if (!preg_match('/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i', $dto->email))
+		if (!Text::isEmail($dto->email))
 		{
 			$errors['email'] = 'Некорректный e-mail';
 		}
 
-		if ($dto->phone !== '')
+		if ($dto->phone !== '' && !Text::isPhone($dto->phone))
 		{
-			$digits = preg_replace('/[^0-9]/', '', $dto->phone) ?? '';
-			if (strlen($digits) < 10 || strlen($digits) > 15)
-			{
-				$errors['phone'] = 'Некорректный телефон';
-			}
+			$errors['phone'] = 'Некорректный телефон';
 		}
 
 		// Баг №10: строго mb_strlen < 10

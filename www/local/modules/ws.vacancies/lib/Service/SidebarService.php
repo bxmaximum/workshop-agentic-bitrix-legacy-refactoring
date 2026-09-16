@@ -7,6 +7,7 @@ namespace Ws\Vacancies\Service;
 use Ws\Vacancies\Dto\SectionDto;
 use Ws\Vacancies\Dto\SidebarDto;
 use Ws\Vacancies\Dto\VacancyDto;
+use Ws\Vacancies\Helper\UrlBuilder;
 use Ws\Vacancies\Repository\VacancyRepository;
 use Ws\Vacancies\Repository\VacancyResponseRepository;
 use Ws\Vacancies\Repository\VacancyStatRepository;
@@ -24,7 +25,7 @@ final class SidebarService
 	public function getForList(
 		int $currentSectionId,
 		int $popularCount,
-		string $baseUrl = '/vacancies/',
+		string $baseUrl = UrlBuilder::DEFAULT_BASE_URL,
 	): SidebarDto {
 		$iblockId = $this->vacancies->getIblockId();
 		$sections = [];
@@ -36,7 +37,7 @@ final class SidebarService
 				name: (string)$section['NAME'],
 				code: (string)$section['CODE'],
 				count: (int)$section['COUNT'],
-				url: $baseUrl . '?section=' . $id,
+				url: UrlBuilder::section($id, $baseUrl),
 				selected: $id === $currentSectionId,
 			);
 		}
@@ -59,7 +60,7 @@ final class SidebarService
 		VacancyDto $currentVacancy,
 		int $popularCount,
 		int $relatedCount,
-		string $baseUrl = '/vacancies/',
+		string $baseUrl = UrlBuilder::DEFAULT_BASE_URL,
 	): SidebarDto {
 		// +1 к лимиту, чтобы после исключения текущей набрать нужное число
 		$popular = $this->loadPopular($popularCount + 1, $currentVacancy->id, $baseUrl);
@@ -107,10 +108,7 @@ final class SidebarService
 				continue;
 			}
 
-			$code = (string)($row['CODE'] ?? '');
-			$url = $code !== ''
-				? $baseUrl . '?CODE=' . rawurlencode($code)
-				: $baseUrl . '?ID=' . $popularId;
+			$url = UrlBuilder::vacancy((string)($row['CODE'] ?? ''), $popularId, $baseUrl);
 
 			$result[] = VacancyDto::fromRow(
 				$row,

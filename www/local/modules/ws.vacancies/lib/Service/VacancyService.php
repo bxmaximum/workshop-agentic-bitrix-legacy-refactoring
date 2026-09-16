@@ -7,6 +7,9 @@ namespace Ws\Vacancies\Service;
 use Ws\Vacancies\Dto\VacancyDto;
 use Ws\Vacancies\Dto\VacancyFilterDto;
 use Ws\Vacancies\Dto\VacancyListDto;
+use Ws\Vacancies\Dto\VacancyStatsDto;
+use Ws\Vacancies\Helper\Formatter;
+use Ws\Vacancies\Helper\UrlBuilder;
 use Ws\Vacancies\Repository\VacancyRepository;
 use Ws\Vacancies\Repository\VacancyResponseRepository;
 use Ws\Vacancies\Repository\VacancyStatRepository;
@@ -21,7 +24,7 @@ final class VacancyService
 	) {
 	}
 
-	public function getList(VacancyFilterDto $filter, string $baseUrl = '/vacancies/'): VacancyListDto
+	public function getList(VacancyFilterDto $filter, string $baseUrl = UrlBuilder::DEFAULT_BASE_URL): VacancyListDto
 	{
 		$filter = $filter->withFavoriteIds($this->favorites->getFavoriteIds());
 
@@ -87,8 +90,12 @@ final class VacancyService
 	/**
 	 * Приоритет ID над CODE (баг №5). Инкремент просмотров на GET (баг №13).
 	 */
-	public function getDetail(int $id, string $code, bool $isPost, string $baseUrl = '/vacancies/'): ?VacancyDto
-	{
+	public function getDetail(
+		int $id,
+		string $code,
+		bool $isPost,
+		string $baseUrl = UrlBuilder::DEFAULT_BASE_URL,
+	): ?VacancyDto {
 		$row = null;
 		if ($id > 0)
 		{
@@ -126,7 +133,7 @@ final class VacancyService
 				if ((int)$section['ID'] === $sectionId)
 				{
 					$sectionName = (string)$section['NAME'];
-					$sectionUrl = $this->buildSectionUrl($baseUrl, $sectionId);
+					$sectionUrl = UrlBuilder::section($sectionId, $baseUrl);
 					break;
 				}
 			}
@@ -153,7 +160,7 @@ final class VacancyService
 	/**
 	 * @return list<VacancyDto>
 	 */
-	public function getRelated(VacancyDto $vacancy, int $limit, string $baseUrl = '/vacancies/'): array
+	public function getRelated(VacancyDto $vacancy, int $limit, string $baseUrl = UrlBuilder::DEFAULT_BASE_URL): array
 	{
 		$rows = $this->vacancies->getRelated(
 			$vacancy->id,
@@ -183,6 +190,18 @@ final class VacancyService
 		return $items;
 	}
 
+	/**
+	 * Счётчики вакансии для AJAX (просмотры и отклики без SPAM), без инкремента.
+	 */
+	public function getStats(int $vacancyId): VacancyStatsDto
+	{
+		return new VacancyStatsDto(
+			vacancyId: $vacancyId,
+			views: $this->stats->getViews($vacancyId),
+			responseCount: $this->responses->getValidCountByVacancyId($vacancyId),
+		);
+	}
+
 	public function getIblockId(): int
 	{
 		return $this->vacancies->getIblockId();
@@ -209,7 +228,7 @@ final class VacancyService
 			$sectionId = (int)$row['IBLOCK_SECTION_ID'];
 			$result[$id] = [
 				'name' => $cache[$sectionId] ?? '',
-				'url' => $sectionId > 0 ? $this->buildSectionUrl($baseUrl, $sectionId) : '',
+				'url' => $sectionId > 0 ? UrlBuilder::section($sectionId, $baseUrl) : '',
 			];
 		}
 
@@ -239,7 +258,7 @@ final class VacancyService
 			[
 				'salaryFrom' => $salaryFrom,
 				'salaryTo' => $salaryTo,
-				'salaryText' => $this->formatSalary($salaryFrom, $salaryTo),
+				'salaryText' => Formatter::salary($salaryFrom, $salaryTo),
 				'city' => (string)($row['CITY'] ?? ''),
 				'cityId' => (int)($row['CITY_ID'] ?? 0),
 				'experience' => (string)($row['EXPERIENCE'] ?? ''),
@@ -247,14 +266,14 @@ final class VacancyService
 				'isHot' => (bool)($row['HOT'] ?? false),
 				'isNew' => $this->isNew($activeFrom),
 				'tags' => is_array($row['TAGS'] ?? null) ? $row['TAGS'] : [],
-				'dateFormatted' => $this->formatDate($activeFrom),
-				'dateText' => $this->daysAgo($activeFrom),
+				'dateFormatted' => Formatter::date($activeFrom),
+				'dateText' => Formatter::daysAgo($activeFrom),
 				'activeFrom' => $activeFrom,
 				'views' => $views,
 				'responseCount' => $responseCount,
 				'weekResponseCount' => $weekResponseCount,
 				'isFavorite' => $isFavorite,
-				'url' => $this->vacancyUrl($row, $baseUrl),
+				'url' => UrlBuilder::vacancy((string)($row['CODE'] ?? ''), (int)($row['ID'] ?? 0), $baseUrl),
 				'sectionName' => $sectionName,
 				'sectionUrl' => $sectionUrl,
 				'sectionId' => (int)($row['IBLOCK_SECTION_ID'] ?? 0),
@@ -280,119 +299,5 @@ final class VacancyService
 		}
 
 		return (time() - $ts) < 3 * 86400;
-	}
-
-	/**
-	 * @param array<string, mixed> $item
-	 */
-	private function vacancyUrl(array $item, string $baseUrl): string
-	{
-		$code = (string)($item['CODE'] ?? '');
-		if ($code !== '')
-		{
-			return $baseUrl . '?CODE=' . rawurlencode($code);
-		}
-
-		return $baseUrl . '?ID=' . (int)($item['ID'] ?? 0);
-	}
-
-	private function buildSectionUrl(string $baseUrl, int $sectionId): string
-	{
-		return $baseUrl . '?section=' . $sectionId;
-	}
-
-	private function formatSalary(int $from, int $to, string $currency = '₽'): string
-	{
-		if ($from <= 0 && $to <= 0)
-		{
-			return 'по договорённости';
-		}
-
-		if ($from > 0 && $to > 0)
-		{
-			if ($from === $to)
-			{
-				return $this->formatNumber($from) . ' ' . $currency;
-			}
-
-			return 'от ' . $this->formatNumber($from) . ' до ' . $this->formatNumber($to) . ' ' . $currency;
-		}
-
-		if ($from > 0)
-		{
-			return 'от ' . $this->formatNumber($from) . ' ' . $currency;
-		}
-
-		return 'до ' . $this->formatNumber($to) . ' ' . $currency;
-	}
-
-	private function formatNumber(int $n): string
-	{
-		return number_format($n, 0, '.', ' ');
-	}
-
-	private function formatDate(string $dateString): string
-	{
-		if ($dateString === '')
-		{
-			return '';
-		}
-
-		$ts = MakeTimeStamp($dateString);
-
-		return $ts > 0 ? FormatDate('d.m.Y', $ts) : '';
-	}
-
-	private function daysAgo(string $dateString): string
-	{
-		if ($dateString === '')
-		{
-			return '';
-		}
-
-		$ts = MakeTimeStamp($dateString);
-		if ($ts <= 0)
-		{
-			return $dateString;
-		}
-
-		$today = mktime(0, 0, 0);
-		$day = mktime(0, 0, 0, (int)date('n', $ts), (int)date('j', $ts), (int)date('Y', $ts));
-		$diff = (int)(($today - $day) / 86400);
-
-		if ($diff <= 0)
-		{
-			return 'сегодня';
-		}
-		if ($diff === 1)
-		{
-			return 'вчера';
-		}
-		if ($diff < 30)
-		{
-			return $diff . ' ' . $this->plural($diff, 'день', 'дня', 'дней') . ' назад';
-		}
-
-		return date('d.m.Y', $ts);
-	}
-
-	private function plural(int $n, string $one, string $two, string $five): string
-	{
-		$n = abs($n) % 100;
-		$n1 = $n % 10;
-		if ($n > 10 && $n < 20)
-		{
-			return $five;
-		}
-		if ($n1 > 1 && $n1 < 5)
-		{
-			return $two;
-		}
-		if ($n1 === 1)
-		{
-			return $one;
-		}
-
-		return $five;
 	}
 }
