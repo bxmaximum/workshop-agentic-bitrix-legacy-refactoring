@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Запуск из папки tests/:  composer test   (эквивалент ./vendor/bin/pest \-\-test-directory .)
+  Pest.php лежит здесь же, в корне проекта, поэтому Pest нужен флаг \-\-test-directory .
+-->
+<phpunit bootstrap="vendor/autoload.php" colors="true" failOnWarning="false">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>Integration</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>../www/local/modules/ws.vacancies/lib</directory>
+        </include>
+    </source>
+</phpunit>

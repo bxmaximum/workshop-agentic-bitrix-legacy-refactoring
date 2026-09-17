@@ -138,3 +138,12 @@ export PATH="/Users/kirk/Library/Application Support/Omut/bin/shims:$PATH"
 cd /Users/kirk/Omut/lesson3-copy.bitrix/e2e && ./vendor/bin/pest
 ```
 
+Unit/Integration/Feature-тесты модуля (`tests/`, Pest 5; Pest.php лежит в корне проекта, поэтому нужен `--test-directory .` — он зашит в composer-скрипты):
+```
+export PATH="/Users/kirk/Library/Application Support/Omut/bin/php-8.4:$PATH"
+export PHPRC="/Users/kirk/Library/Application Support/Omut/configs/php/php-8.4-mysql-8.4.ini"
+cd /Users/kirk/Omut/lesson3-copy.bitrix/tests && composer test            # все три сьюта
+composer test:unit | composer test:integration | composer test:feature   # по одному
+```
+Feature ходит на `SITE_URL` (по умолчанию `http://workshop.bitrix`; для этой копии — `SITE_URL=http://lesson3-copy.bitrix:8765`).
+

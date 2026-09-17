@@ -1,0 +1,32 @@
+{
+    "name": "workshop/tests",
+    "description": "Unit-, интеграционные и HTTP-тесты модуля ws.vacancies. Отдельный проект рядом с e2e/: Unit ядро не грузит, Integration поднимает ядро Битрикса из ../www, Feature ходит на сайт по HTTP.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ws\\Vacancies\\": "../www/local/modules/ws.vacancies/lib/"
+        }
+    },
+    "scripts": {
+        "test": "pest --test-directory .",
+        "test:unit": "pest --test-directory . --testsuite Unit",
+        "test:integration": "pest --test-directory . --testsuite Integration",
+        "test:feature": "pest --test-directory . --testsuite Feature"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
