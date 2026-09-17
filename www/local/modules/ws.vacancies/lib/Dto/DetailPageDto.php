@@ -10,7 +10,7 @@ namespace Ws\Vacancies\Dto;
 final readonly class DetailPageDto
 {
 	public function __construct(
-		public VacancyDto $item
+		public VacancyDto $item,
 		public SidebarDto $sidebar,
 		public PageMetaDto $meta,
 	) {
