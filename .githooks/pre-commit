@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Подключение: git config core.hooksPath .githooks
+# Обойти в крайнем случае: git commit --no-verify
+set -uo pipefail
+
+lib="$(git rev-parse --show-toplevel)/.githooks/lib"
+
+staged=()
+while IFS= read -r -d '' f; do
+    staged+=("$f")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.php')
+
+if [[ ${#staged[@]} -gt 0 ]]; then
+    echo "pre-commit: php -l (${#staged[@]} файлов)"
+    if ! "$lib/lint-file.sh" --staged "${staged[@]}"; then
+        echo "pre-commit: синтаксические ошибки, коммит отменён" >&2
+        exit 1
+    fi
+fi
+
+echo "pre-commit: unit-тесты"
+if ! "$lib/unit.sh"; then
+    echo "pre-commit: unit-тесты упали, коммит отменён" >&2
+    exit 1
+fi

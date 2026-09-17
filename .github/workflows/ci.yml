@@ -1,0 +1,37 @@
+# CI: только то, что не требует живого Битрикса.
+#
+# Integration, Feature и e2e здесь не запускаются:
+# - Integration поднимает ядро из www/bitrix — его нет в репозитории (лицензионное ядро, .gitignore),
+#   плюс нужна MySQL с установленным сайтом и данными модуля ws.vacancies;
+# - Feature ходит на сайт по HTTP — нужен запущенный стенд (Omut: nginx + php-fpm + БД);
+# - e2e гоняет браузер против того же стенда и перезаливает данные через docs/legacy/seed.php.
+# Всё это запускается локально на стенде. В CI — синтаксис и Unit (чистый PHP без ядра).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: composer install (tests/)
+        working-directory: tests
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: php -l (www/local)
+        run: find www/local -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Pest Unit
+        working-directory: tests
+        # --test-directory . — Pest.php лежит в корне tests/, без флага Pest ищет tests/tests/
+        run: ./vendor/bin/pest --test-directory . --testsuite=Unit

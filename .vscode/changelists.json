@@ -1,0 +1,19 @@
+{
+  "changelists": [
+    {
+      "name": "Default",
+      "files": [
+        ".cursor/hooks.json",
+        ".githooks/lib/lint-file.sh",
+        ".githooks/lib/unit.sh",
+        ".githooks/pre-commit",
+        ".github/workflows/ci.yml",
+        ".vscode/changelists.json",
+        "README.md",
+        "www/local/modules/ws.vacancies/lib/Dto/DetailPageDto.php",
+        ".githooks/lib/php-bin.sh"
+      ]
+    }
+  ],
+  "active": "Default"
+}

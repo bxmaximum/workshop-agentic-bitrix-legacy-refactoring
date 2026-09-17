@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      { "command": ".githooks/lib/lint-file.sh" }
+    ],
+    "stop": [
+      { "command": ".githooks/lib/unit.sh --cursor" }
+    ]
+  }
+}
