@@ -12,9 +12,12 @@ use Bitrix\Iblock\SectionTable;
 use Bitrix\Main\Application;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ORM\Fields\ExpressionField;
+use Bitrix\Main\ORM\Fields\Relations\Reference;
+use Bitrix\Main\ORM\Query\Join;
 use Bitrix\Main\ORM\Query\Query;
 use Bitrix\Main\Type\DateTime;
 use Ws\Vacancies\Dto\VacancyFilterDto;
+use Ws\Vacancies\Model\VacancyStatTable;
 
 final class VacancyRepository
 {
@@ -131,9 +134,17 @@ final class VacancyRepository
 		$page = min(max(1, $filter->page), $totalPages);
 		$offset = ($page - 1) * $pageSize;
 
+		$normalizedSort = $this->normalizeSort($sort);
 		$listQuery = $this->buildFilteredQuery($filter)
-			->setSelect($this->elementSelect())
-			->setOrder($this->normalizeSort($sort))
+			->setSelect($this->elementSelect());
+
+		if ($this->sortNeedsStat($normalizedSort))
+		{
+			$this->ensureStatReference($listQuery);
+		}
+
+		$listQuery
+			->setOrder($normalizedSort)
 			->setLimit($pageSize)
 			->setOffset($offset);
 
@@ -552,6 +563,7 @@ final class VacancyRepository
 			$mappedField = match ($field)
 			{
 				'PROPERTY_SALARY_FROM', 'SALARY_FROM' => 'SALARY_FROM.VALUE',
+				'STAT.VIEWS', 'VIEWS' => 'STAT.VIEWS',
 				default => $field,
 			};
 			$result[$mappedField] = $dir;
@@ -563,6 +575,42 @@ final class VacancyRepository
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @param array<string, string> $sort
+	 */
+	private function sortNeedsStat(array $sort): bool
+	{
+		foreach (array_keys($sort) as $field)
+		{
+			if (str_starts_with((string)$field, 'STAT.'))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Связь ElementVacancyTable → VacancyStatTable для глобальной сортировки по просмотрам.
+	 */
+	private function ensureStatReference(Query $query): void
+	{
+		$entity = ElementVacancyTable::getEntity();
+		if ($entity->hasField('STAT'))
+		{
+			return;
+		}
+
+		$query->registerRuntimeField(
+			new Reference(
+				'STAT',
+				VacancyStatTable::class,
+				Join::on('this.ID', 'ref.VACANCY_ID')
+			)
+		);
 	}
 
 	/**

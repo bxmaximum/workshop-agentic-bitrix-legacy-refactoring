@@ -149,17 +149,16 @@ describe('Вакансии — сортировка', function () {
             ->assertSeeIn('.lv-items .lv-item:nth-child(5) .lv-item-name', 'Presale-инженер');
     });
 
-    test('по просмотрам сортирует только внутри страницы по дате (баг №1)', function () {
+    test('по просмотрам сортирует глобально до пагинации', function () {
         visit(site('/vacancies/?sort=views'))
             ->assertSeeIn('.lv-items .lv-item:nth-child(1) .lv-item-name', 'Senior PHP-разработчик (Битрикс)')
             ->assertSeeIn('.lv-items .lv-item:nth-child(2) .lv-item-name', 'Frontend-разработчик (Vue 3)')
-            ->assertSeeIn('.lv-items .lv-item:nth-child(3) .lv-item-name', 'Менеджер по продажам B2B')
-            ->assertSeeIn('.lv-items .lv-item:nth-child(4) .lv-item-name', 'Middle PHP-разработчик')
-            ->assertSeeIn('.lv-items .lv-item:nth-child(5) .lv-item-name', 'Специалист техподдержки (1-я линия)')
-            ->assertDontSeeIn('.lv-items', 'DevOps-инженер');
+            ->assertSeeIn('.lv-items .lv-item:nth-child(3) .lv-item-name', 'DevOps-инженер')
+            ->assertSeeIn('.lv-items .lv-item:nth-child(4) .lv-item-name', 'Менеджер по продажам B2B')
+            ->assertSeeIn('.lv-items .lv-item:nth-child(5) .lv-item-name', 'Инженер поддержки (2-я линия, Битрикс)');
 
         visit(site('/vacancies/?sort=views&page=2'))
-            ->assertSeeIn('.lv-items .lv-item:nth-child(1) .lv-item-name', 'DevOps-инженер');
+            ->assertDontSeeIn('.lv-items', 'DevOps-инженер');
     });
 
     test('неизвестный sort откатывается к дате', function () {

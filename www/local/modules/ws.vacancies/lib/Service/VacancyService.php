@@ -28,10 +28,9 @@ final class VacancyService
 	{
 		$filter = $filter->withFavoriteIds($this->favorites->getFavoriteIds());
 
-		// Баг №1: при sort=views выборка по дате, затем usort по просмотрам текущей страницы
-		$sortByViews = $filter->sort === 'views';
 		$sort = match ($filter->sort)
 		{
+			'views' => ['STAT.VIEWS' => 'DESC', 'ID' => 'DESC'],
 			'salary' => ['PROPERTY_SALARY_FROM' => 'DESC,NULLS', 'ID' => 'DESC'],
 			'name' => ['NAME' => 'ASC', 'ID' => 'DESC'],
 			default => ['ACTIVE_FROM' => 'DESC', 'ID' => 'DESC'],
@@ -60,21 +59,6 @@ final class VacancyService
 				sectionName: $sectionNames[$id]['name'] ?? '',
 				sectionUrl: $sectionNames[$id]['url'] ?? '',
 				isFavorite: $this->favorites->isFavorite($id),
-			);
-		}
-
-		if ($sortByViews && count($items) > 1)
-		{
-			usort(
-				$items,
-				static function (VacancyDto $a, VacancyDto $b): int {
-					if ($a->views === $b->views)
-					{
-						return $b->id <=> $a->id;
-					}
-
-					return $b->views <=> $a->views;
-				}
 			);
 		}
 
