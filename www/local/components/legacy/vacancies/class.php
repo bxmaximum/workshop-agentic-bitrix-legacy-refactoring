@@ -7,6 +7,7 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 	die();
 }
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Context;
 use Bitrix\Main\DI\ServiceLocator;
 use Bitrix\Main\Engine\CurrentUser;
@@ -20,6 +21,8 @@ use Ws\Vacancies\Dto\ResponseSettingsDto;
 use Ws\Vacancies\Dto\VacancyDto;
 use Ws\Vacancies\Dto\VacancyFilterDto;
 use Ws\Vacancies\Presenter\VacancyPresenter;
+use Ws\Vacancies\Repository\VacancyStatRepository;
+use Ws\Vacancies\Service\FavoriteService;
 use Ws\Vacancies\Service\VacancyPageService;
 use Ws\Vacancies\Service\VacancyResponseService;
 
@@ -35,6 +38,8 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 	private VacancyPageService $pages;
 	private VacancyResponseService $responses;
 	private VacancyPresenter $presenter;
+	private FavoriteService $favorites;
+	private VacancyStatRepository $stats;
 
 	public function onPrepareComponentParams($arParams): array
 	{
@@ -56,6 +61,9 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		$arParams['FORM_EVENT_NAME'] = trim((string)($arParams['FORM_EVENT_NAME'] ?? '')) ?: 'LEGACY_VACANCY_RESPONSE';
 		$arParams['FORM_EMAIL_TO'] = trim((string)($arParams['FORM_EMAIL_TO'] ?? ''));
 
+		$arParams['CACHE_TIME'] = max(0, (int)($arParams['CACHE_TIME'] ?? 3600));
+		$arParams['CACHE_TYPE'] = (string)($arParams['CACHE_TYPE'] ?? 'A');
+
 		return $arParams;
 	}
 
@@ -72,6 +80,8 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		$this->pages = $locator->get(VacancyPageService::class);
 		$this->responses = $locator->get(VacancyResponseService::class);
 		$this->presenter = $locator->get(VacancyPresenter::class);
+		$this->favorites = $locator->get(FavoriteService::class);
+		$this->stats = $locator->get(VacancyStatRepository::class);
 
 		if ($this->pages->getIblockId() <= 0)
 		{
@@ -92,17 +102,36 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 			'POPULAR' => [],
 			'SECTIONS' => [],
 			'ERROR' => '',
+			'META' => [],
 		];
 
-		if ($elementId > 0 || $elementCode !== '')
+		$isFormPost = $request->isPost() && $request->getPost('legacy_respond') !== null;
+		// fav=Y зависит от сессии — не кешируем; POST формы — тоже
+		$skipCache = $isFormPost || (string)($request->get('fav') ?? '') === 'Y';
+
+		if ($skipCache)
 		{
-			$this->executeDetail($request, $elementId, $elementCode);
+			$this->buildResult($request, $elementId, $elementCode);
+		}
+		elseif ($this->startResultCache((int)$this->arParams['CACHE_TIME'], $this->buildCacheId($request, $elementId, $elementCode)))
+		{
+			$this->buildResult($request, $elementId, $elementCode);
+			// FORM и IS_FAVORITE персональные — не пишем в кеш
+			unset($this->arResult['FORM']);
+			$this->stripFavoriteFlags();
+			$this->registerCacheTags();
+			$this->endResultCache();
 		}
 		else
 		{
-			$this->executeList($request);
+			// cache hit: инкремент просмотров (на miss его делает getDetail)
+			$this->incrementViewsOnCacheHit($request);
 		}
 
+		$this->applyFavorites();
+		$this->ensureForm($request);
+		$this->applyHttpStatus();
+		$this->applyStoredMeta();
 		$this->includeComponentTemplate();
 	}
 
@@ -123,6 +152,38 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		$code = preg_replace('/[^a-z0-9\-_]/i', '', trim((string)($request->get('CODE') ?? ''))) ?? '';
 
 		return [$id, $code];
+	}
+
+	/**
+	 * @return list<scalar>
+	 */
+	private function buildCacheId(HttpRequest $request, int $elementId, string $elementCode): array
+	{
+		return [
+			$this->pages->getIblockId(),
+			$elementId,
+			$elementCode,
+			(int)($request->get('section') ?? 0),
+			(int)($request->get('city') ?? 0),
+			(int)($request->get('exp') ?? 0),
+			(int)($request->get('salary') ?? 0),
+			(string)($request->get('hot') ?? ''),
+			trim((string)($request->get('q') ?? '')),
+			(string)($request->get('sort') ?? ''),
+			(int)($request->get('page') ?? 1),
+		];
+	}
+
+	private function buildResult(HttpRequest $request, int $elementId, string $elementCode): void
+	{
+		if ($elementId > 0 || $elementCode !== '')
+		{
+			$this->executeDetail($request, $elementId, $elementCode);
+		}
+		else
+		{
+			$this->executeList($request);
+		}
 	}
 
 	private function executeList(HttpRequest $request): void
@@ -150,7 +211,7 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		$this->arResult['POPULAR'] = array_map([$this->presenter, 'popular'], $page->sidebar->popular);
 		$this->arResult['WEEK_SUMMARY'] = $page->sidebar->weekSummary;
 
-		$this->applyMeta($page->meta);
+		$this->storeMeta($page->meta);
 	}
 
 	private function executeDetail(HttpRequest $request, int $elementId, string $elementCode): void
@@ -162,9 +223,7 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 			$meta = $this->pages->notFoundMeta();
 			$this->arResult['MODE'] = '404';
 			$this->arResult['ERROR'] = $meta->title;
-			@define('ERROR_404', 'Y');
-			CHTTP::SetStatus('404 Not Found');
-			$this->applyMeta($meta);
+			$this->storeMeta($meta);
 
 			return;
 		}
@@ -179,7 +238,7 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		);
 		$this->arResult['POPULAR'] = array_map([$this->presenter, 'popular'], $page->sidebar->popular);
 
-		$this->applyMeta($page->meta);
+		$this->storeMeta($page->meta);
 	}
 
 	/**
@@ -190,11 +249,7 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 	 */
 	private function processForm(HttpRequest $request, VacancyDto $item): array
 	{
-		$form = [
-			'ERRORS' => [],
-			'VALUES' => [],
-			'SENT' => (string)($request->get('sent') ?? '') === 'Y',
-		];
+		$form = $this->emptyForm($request);
 
 		if ($this->arParams['SHOW_FORM'] !== 'Y')
 		{
@@ -253,6 +308,172 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 		return $form;
 	}
 
+	/**
+	 * @return array{ERRORS: array<string, string>, VALUES: array<string, string>, SENT: bool}
+	 */
+	private function emptyForm(HttpRequest $request): array
+	{
+		return [
+			'ERRORS' => [],
+			'VALUES' => [],
+			'SENT' => (string)($request->get('sent') ?? '') === 'Y',
+		];
+	}
+
+	/**
+	 * После кеша: форма для GET (sent=Y и префил авторизованного).
+	 */
+	private function ensureForm(HttpRequest $request): void
+	{
+		if (($this->arResult['MODE'] ?? '') !== 'detail')
+		{
+			return;
+		}
+
+		if ($request->isPost() && $request->getPost('legacy_respond') !== null)
+		{
+			return;
+		}
+
+		$form = $this->emptyForm($request);
+		if ($this->arParams['SHOW_FORM'] === 'Y')
+		{
+			$user = CurrentUser::get();
+			if ((int)$user->getId() > 0)
+			{
+				$form['VALUES'] = [
+					'name' => (string)$user->getFullName(),
+					'email' => (string)$user->getEmail(),
+					'phone' => '',
+					'message' => '',
+				];
+			}
+		}
+
+		$this->arResult['FORM'] = $form;
+	}
+
+	private function stripFavoriteFlags(): void
+	{
+		foreach ($this->arResult['ITEMS'] as &$item)
+		{
+			$item['IS_FAVORITE'] = false;
+		}
+		unset($item);
+
+		if ($this->arResult['ITEM'] !== [])
+		{
+			$this->arResult['ITEM']['IS_FAVORITE'] = false;
+		}
+	}
+
+	private function applyFavorites(): void
+	{
+		$ids = $this->favorites->getFavoriteIds();
+		if ($ids === [])
+		{
+			return;
+		}
+
+		$set = array_fill_keys($ids, true);
+
+		foreach ($this->arResult['ITEMS'] as &$item)
+		{
+			$item['IS_FAVORITE'] = isset($set[(int)($item['ID'] ?? 0)]);
+		}
+		unset($item);
+
+		if ($this->arResult['ITEM'] !== [])
+		{
+			$this->arResult['ITEM']['IS_FAVORITE'] = isset($set[(int)($this->arResult['ITEM']['ID'] ?? 0)]);
+		}
+	}
+
+	private function incrementViewsOnCacheHit(HttpRequest $request): void
+	{
+		if (($this->arResult['MODE'] ?? '') !== 'detail' || $request->isPost())
+		{
+			return;
+		}
+
+		$vacancyId = (int)($this->arResult['ITEM']['ID'] ?? 0);
+		if ($vacancyId <= 0)
+		{
+			return;
+		}
+
+		$this->stats->incrementViews($vacancyId);
+		$views = $this->stats->getViews($vacancyId);
+		$this->arResult['ITEM']['VIEWS'] = $views;
+		$this->arResult['ITEM']['VIEWS_FORMATTED'] = number_format($views, 0, '.', ' ');
+	}
+
+	private function registerCacheTags(): void
+	{
+		$tagged = Application::getInstance()->getTaggedCache();
+		$tagged->registerTag('ws_vacancies');
+
+		if (($this->arResult['MODE'] ?? '') === 'detail')
+		{
+			$id = (int)($this->arResult['ITEM']['ID'] ?? 0);
+			if ($id > 0)
+			{
+				$tagged->registerTag('ws_vacancies_item_' . $id);
+			}
+		}
+	}
+
+	private function applyHttpStatus(): void
+	{
+		if (($this->arResult['MODE'] ?? '') !== '404')
+		{
+			return;
+		}
+
+		@define('ERROR_404', 'Y');
+		CHTTP::SetStatus('404 Not Found');
+	}
+
+	private function storeMeta(PageMetaDto $meta): void
+	{
+		$this->arResult['META'] = [
+			'TITLE' => $meta->title,
+			'DESCRIPTION' => $meta->description,
+			'KEYWORDS' => $meta->keywords,
+			'BREADCRUMBS' => $meta->breadcrumbs,
+		];
+	}
+
+	private function applyStoredMeta(): void
+	{
+		$meta = $this->arResult['META'] ?? null;
+		if (!is_array($meta) || $meta === [])
+		{
+			return;
+		}
+
+		global $APPLICATION;
+
+		$APPLICATION->SetTitle((string)($meta['TITLE'] ?? ''));
+		$description = (string)($meta['DESCRIPTION'] ?? '');
+		if ($description !== '')
+		{
+			$APPLICATION->SetPageProperty('description', $description);
+		}
+		if (array_key_exists('KEYWORDS', $meta) && $meta['KEYWORDS'] !== null)
+		{
+			$APPLICATION->SetPageProperty('keywords', (string)$meta['KEYWORDS']);
+		}
+		foreach ($meta['BREADCRUMBS'] ?? [] as $crumb)
+		{
+			if (!is_array($crumb))
+			{
+				continue;
+			}
+			$APPLICATION->AddChainItem((string)($crumb['name'] ?? ''), (string)($crumb['url'] ?? ''));
+		}
+	}
+
 	private function pageSettings(): PageSettingsDto
 	{
 		return new PageSettingsDto(
@@ -261,25 +482,6 @@ final class LegacyVacanciesComponent extends CBitrixComponent
 			popularCount: $this->arParams['SHOW_POPULAR'] === 'Y' ? (int)$this->arParams['POPULAR_COUNT'] : 0,
 			relatedCount: (int)$this->arParams['RELATED_COUNT'],
 		);
-	}
-
-	private function applyMeta(PageMetaDto $meta): void
-	{
-		global $APPLICATION;
-
-		$APPLICATION->SetTitle($meta->title);
-		if ($meta->description !== '')
-		{
-			$APPLICATION->SetPageProperty('description', $meta->description);
-		}
-		if ($meta->keywords !== null)
-		{
-			$APPLICATION->SetPageProperty('keywords', $meta->keywords);
-		}
-		foreach ($meta->breadcrumbs as $crumb)
-		{
-			$APPLICATION->AddChainItem($crumb['name'], $crumb['url']);
-		}
 	}
 
 	/**
