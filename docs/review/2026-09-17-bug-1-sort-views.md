@@ -24,4 +24,4 @@
 
 ## Решения (заполняет человек)
 
-- №1 —
+- №1 — закрыто: добавлены Integration-тесты на `ID DESC` при равных `VIEWS` и на вакансию без строки `STAT` (NULL ≡ 0); в `VacancyRepository` сортировка через `IFNULL(STAT.VIEWS, 0)` / `VIEWS_SORT`.

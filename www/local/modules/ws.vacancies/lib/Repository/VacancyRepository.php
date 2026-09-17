@@ -140,7 +140,7 @@ final class VacancyRepository
 
 		if ($this->sortNeedsStat($normalizedSort))
 		{
-			$this->ensureStatReference($listQuery);
+			$normalizedSort = $this->applyStatViewsSort($listQuery, $normalizedSort);
 		}
 
 		$listQuery
@@ -594,6 +594,26 @@ final class VacancyRepository
 	}
 
 	/**
+	 * Связь ElementVacancyTable → VacancyStatTable и сортировка с NULL ≡ 0.
+	 *
+	 * @param array<string, string> $sort
+	 * @return array<string, string>
+	 */
+	private function applyStatViewsSort(Query $query, array $sort): array
+	{
+		$this->ensureStatReference($query);
+		$this->ensureViewsSortExpression($query);
+
+		$result = [];
+		foreach ($sort as $field => $direction)
+		{
+			$result[$field === 'STAT.VIEWS' ? 'VIEWS_SORT' : $field] = $direction;
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Связь ElementVacancyTable → VacancyStatTable для глобальной сортировки по просмотрам.
 	 */
 	private function ensureStatReference(Query $query): void
@@ -610,6 +630,22 @@ final class VacancyRepository
 				VacancyStatTable::class,
 				Join::on('this.ID', 'ref.VACANCY_ID')
 			)
+		);
+	}
+
+	/**
+	 * IFNULL(STAT.VIEWS, 0): вакансия без строки статистики = 0 просмотров.
+	 */
+	private function ensureViewsSortExpression(Query $query): void
+	{
+		$entity = ElementVacancyTable::getEntity();
+		if ($entity->hasField('VIEWS_SORT'))
+		{
+			return;
+		}
+
+		$query->registerRuntimeField(
+			new ExpressionField('VIEWS_SORT', 'IFNULL(%s, 0)', ['STAT.VIEWS'])
 		);
 	}
 
