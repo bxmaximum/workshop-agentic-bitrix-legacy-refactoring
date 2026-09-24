@@ -3,7 +3,9 @@
     {
       "name": "Default",
       "files": [
-        ".cursor/agents/analyzer.md"
+        ".cursor/agents/reviewer.md",
+        ".vscode/changelists.json",
+        ".cursor/commands/flow.md"
       ]
     }
   ],
