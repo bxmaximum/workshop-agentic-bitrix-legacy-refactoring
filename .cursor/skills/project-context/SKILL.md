@@ -67,6 +67,7 @@ cd e2e && ./vendor/bin/pest
 | `sql_select` | посчитать строки, проверить гипотезу, узнать фактическое число до и после правки |
 | `iblock_elements` | ID и поля вакансии по коду, свойства инфоблока |
 | `module_options` | настройки модуля (`ws.faq`, `main`, `iblock`) |
+| ресурс `bitrix://modules` | установленные модули и версии; читается через `fetch_mcp_resource`, а не через SQL по `b_module` |
 
 Пример: `SELECT STATUS, COUNT(*) CNT FROM legacy_vacancy_response WHERE CREATED >= NOW() - INTERVAL 7 DAY GROUP BY STATUS`.
 
