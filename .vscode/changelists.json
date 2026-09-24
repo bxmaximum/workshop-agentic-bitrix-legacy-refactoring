@@ -3,15 +3,8 @@
     {
       "name": "Default",
       "files": [
-        "tests/composer.json",
-        "tests/composer.lock",
         ".vscode/changelists.json",
-        "tests/Feature/VacanciesPageTest.php",
-        "tests/Integration/VacancyRepositoryTest.php",
-        "tests/Unit/FormatterTest.php",
-        "tests/tests/Feature/VacanciesPageTest.php",
-        "tests/tests/Integration/VacancyRepositoryTest.php",
-        "tests/tests/Unit/FormatterTest.php"
+        "AGENTS.md"
       ]
     }
   ],

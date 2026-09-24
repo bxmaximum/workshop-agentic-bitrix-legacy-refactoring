@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "bitrix-stand": {
+      "type": "stdio",
+      "command": "${userHome}/Library/Application Support/Omut/bin/php-8.4/php",
+      "args": ["${workspaceFolder}/mcp/server.php"],
+      "env": {
+        "PHPRC": "${userHome}/Library/Application Support/Omut/configs/php/php-8.4-mysql-8.4.ini"
+      }
+    }
+  }
+}

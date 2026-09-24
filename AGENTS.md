@@ -105,7 +105,6 @@ Open the skill for the task. If it has `rules/`, read **only** matching rule fil
 | Cache | `bitrix-caching` |
 | Performance | `bitrix-performance` |
 | Security / JWT | `bitrix-security` |
-| Agents / Messenger | `bitrix-background-jobs` |
 | Result / Error | `bitrix-result-and-errors` |
 | Components | `bitrix-components` |
 | Iblocks | `bitrix-iblocks` |
